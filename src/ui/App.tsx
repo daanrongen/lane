@@ -1,0 +1,19 @@
+import { ThemeContext } from "@/ui/lib/context.ts";
+import { useStore } from "@/ui/lib/hooks/useStore.ts";
+import type { Keys, Scheme, Store, UiPorts } from "@/ui/lib/ports.ts";
+import { themes } from "@/ui/lib/theme.ts";
+import { DashboardPage } from "@/ui/pages/DashboardPage.tsx";
+
+export const App = ({
+  ports,
+  scheme,
+  keys,
+}: {
+  ports: UiPorts;
+  scheme: Store<Scheme>;
+  keys: Keys;
+}) => (
+  <ThemeContext.Provider value={themes[useStore(scheme)]}>
+    <DashboardPage ports={ports} keys={keys} />
+  </ThemeContext.Provider>
+);
