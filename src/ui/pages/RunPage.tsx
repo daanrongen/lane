@@ -4,23 +4,26 @@ import { makeAxis } from "@/domain/axis.ts";
 import { board } from "@/domain/board.ts";
 import { contextMap, contextUsed, laneWindow } from "@/domain/context.ts";
 import { mcpServers } from "@/domain/mcp.ts";
+import { modelsUsed } from "@/domain/models.ts";
 import { hosts } from "@/domain/network.ts";
+import { skillsUsed } from "@/domain/skills.ts";
 import { timeline } from "@/domain/timeline.ts";
 import { Box, Row } from "@/ui/atoms/Box.tsx";
-import { MetricsContext, useTheme } from "@/ui/lib/context.ts";
+import { AssetsContext, MetricsContext, useTheme } from "@/ui/lib/context.ts";
 import { useNow } from "@/ui/lib/hooks/useNow.ts";
 import { useStore } from "@/ui/lib/hooks/useStore.ts";
 import { layout } from "@/ui/lib/layout.ts";
 import type { Keys, OpenedRun } from "@/ui/lib/ports.ts";
 import { responsive, type Size } from "@/ui/lib/responsive.ts";
 import { laneColor } from "@/ui/lib/theme.ts";
-import { AssetRows } from "@/ui/organisms/AssetRows.tsx";
+import { modelChips, skillChips } from "@/ui/lib/usageRows.ts";
 import { ContextMap } from "@/ui/organisms/ContextMap.tsx";
 import { Header } from "@/ui/organisms/Header.tsx";
 import { Legend } from "@/ui/organisms/Legend.tsx";
 import { McpServers } from "@/ui/organisms/McpServers.tsx";
 import { NetworkHosts } from "@/ui/organisms/NetworkHosts.tsx";
 import { TimelineChart } from "@/ui/organisms/TimelineChart.tsx";
+import { UsageRow } from "@/ui/organisms/UsageRow.tsx";
 import { WorkBoard } from "@/ui/organisms/WorkBoard.tsx";
 
 const IDLE = { maxIdle: 60, collapsedTo: 2 };
@@ -107,6 +110,14 @@ export const RunPage = ({
         const boardWidth = Math.round(total * 0.5);
         return { context: total - boardWidth - r.pad, board: boardWidth };
       })();
+  const skills = useMemo(
+    () => skillChips(skillsUsed(run.skills), assets),
+    [run.skills, assets],
+  );
+  const models = useMemo(
+    () => modelChips(modelsUsed(run.turns), theme),
+    [run.turns, theme],
+  );
   const reached = useMemo(() => hosts(run.requests), [run.requests]);
   const servers = useMemo(
     () => mcpServers(run.setups, run.spans),
@@ -114,51 +125,54 @@ export const RunPage = ({
   );
 
   return (
-    <MetricsContext.Provider value={r}>
-      <Header
-        title={title}
-        subtitle={cwd}
-        harness={harness}
-        status={status}
-        timeline={tl}
-      />
-      <Box
-        style={{
-          flexDirection: "column",
-          flexGrow: 1,
-          minHeight: 0,
-          overflowY: "scroll",
-        }}
-      >
-        <TimelineChart frame={frame} />
-      </Box>
-      <Row justify="space-between" gap={r.pad}>
-        <Legend />
-        <McpServers servers={servers} />
-      </Row>
-      <NetworkHosts hosts={reached} />
-      <Box
-        style={{
-          flexDirection: r.compact ? "column" : "row",
-          gap: r.pad,
-          alignItems: "flex-start",
-        }}
-      >
-        {lane ? (
-          <ContextMap
-            map={map}
-            agent={lane.agent.name}
-            width={panelWidths.context}
-          />
-        ) : null}
-        <WorkBoard
-          board={work}
-          owners={owners}
-          width={panelWidths.board}
-          height={r.contextHeight}
+    <AssetsContext.Provider value={assets}>
+      <MetricsContext.Provider value={r}>
+        <Header
+          title={title}
+          subtitle={cwd}
+          harness={harness}
+          status={status}
+          timeline={tl}
         />
-      </Box>
-      <AssetRows assets={assets} />
-    </MetricsContext.Provider>
+        <Box
+          style={{
+            flexDirection: "column",
+            flexGrow: 1,
+            minHeight: 0,
+            overflowY: "scroll",
+          }}
+        >
+          <TimelineChart frame={frame} />
+        </Box>
+        <Row justify="space-between" gap={r.pad}>
+          <Legend />
+          <McpServers servers={servers} />
+        </Row>
+        <NetworkHosts hosts={reached} />
+        {skills.length ? <UsageRow title="SKILLS" chips={skills} /> : null}
+        <UsageRow title="MODELS" chips={models} />
+        <Box
+          style={{
+            flexDirection: r.compact ? "column" : "row",
+            gap: r.pad,
+            alignItems: "flex-start",
+          }}
+        >
+          {lane ? (
+            <ContextMap
+              map={map}
+              agent={lane.agent.name}
+              width={panelWidths.context}
+            />
+          ) : null}
+          <WorkBoard
+            board={work}
+            owners={owners}
+            width={panelWidths.board}
+            height={r.contextHeight}
+          />
+        </Box>
+      </MetricsContext.Provider>
+    </AssetsContext.Provider>
   );
 };

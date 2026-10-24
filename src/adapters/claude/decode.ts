@@ -1,6 +1,7 @@
 import type { Decoder } from "@/adapters/shared/decoder.ts";
 import { arr, type Json, num, rec, str } from "@/adapters/shared/json.ts";
 import { planItems, statusOf } from "@/adapters/shared/planText.ts";
+import { reasonOf } from "@/adapters/shared/reason.ts";
 import {
   fetchTarget,
   requestEvents,
@@ -383,6 +384,8 @@ export const makeDecoder = (cfg: DecoderConfig): Decoder => {
           spanId: SpanId(id),
           at,
           failed: block?.is_error === true,
+          reason:
+            block?.is_error === true ? reasonOf(block.content) : undefined,
         },
       ];
     });

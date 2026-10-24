@@ -164,8 +164,8 @@ describe("layout request marks", () => {
       requests: [request(10), request(10.2), request(50)],
     };
     const [row] = frameOf(run).rows;
-    expect(row?.marks.map((x) => x.requests.length)).toEqual([2, 1]);
+    expect(row?.requests.map((x) => x.items.length)).toEqual([2, 1]);
     const bar = row?.bars[0];
-    expect(row?.marks[0]?.y).toBeLessThan(bar?.y ?? 0);
+    expect(row?.requests[0]?.y).toBeLessThan(bar?.y ?? 0);
   });
 });

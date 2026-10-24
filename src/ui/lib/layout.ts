@@ -1,6 +1,8 @@
 import { scaleLinear } from "d3-scale";
 import type { Axis } from "@/domain/axis.ts";
-import type { Handoff, Request, Span } from "@/domain/run.ts";
+import type { ModelSpan } from "@/domain/models.ts";
+import type { PostureSpan } from "@/domain/posture.ts";
+import type { Handoff, Request, SkillUse, Span } from "@/domain/run.ts";
 import {
   type Bar,
   isFailed,
@@ -32,16 +34,30 @@ export interface BarBox extends Box {
   readonly count: number;
 }
 
-// Requests close together share one mark.
-export interface RequestMark extends Box {
-  readonly requests: readonly Request[];
+// Things that happened close together share one mark.
+export interface Mark<T> extends Box {
+  readonly items: readonly T[];
+}
+
+// A thin strip along a lane showing which model answered.
+export interface ModelBox extends Box {
+  readonly span: ModelSpan;
+}
+
+// A stretch of the mode band.
+export interface PostureBox {
+  readonly x: number;
+  readonly width: number;
+  readonly span: PostureSpan;
 }
 
 export interface LaneRow {
   readonly lane: Lane;
   readonly y: number;
   readonly bars: readonly BarBox[];
-  readonly marks: readonly RequestMark[];
+  readonly requests: readonly Mark<Request>[];
+  readonly skills: readonly Mark<SkillUse>[];
+  readonly models: readonly ModelBox[];
 }
 
 // Elbows: down from the parent at the spawn, across into the child, and back at the return.
@@ -60,6 +76,7 @@ export interface AxisLabel {
 
 export interface Frame {
   readonly rows: readonly LaneRow[];
+  readonly posture: readonly PostureBox[];
   readonly links: readonly LinkBoxes[];
   readonly gridlines: readonly number[];
   readonly gaps: readonly Box[];
@@ -69,6 +86,7 @@ export interface Frame {
 
 const DOT = 6;
 const MARK = 8;
+const RIBBON = 3;
 const MARK_MERGE = 6;
 const TINY = 3;
 const JOIN = 2;
@@ -149,7 +167,18 @@ export const layout = (tl: Timeline, axis: Axis, m: Metrics): Frame => {
       lane,
       y,
       bars: coalesce(boxes),
-      marks: marksOf(lane.requests, xOf, barTop - MARK / 2),
+      requests: marksOf(lane.requests, xOf, barTop - MARK / 2),
+      skills: marksOf(lane.skills, xOf, barTop + m.barHeight - MARK / 2),
+      models: lane.models.map((span): ModelBox => {
+        const x = xOf(span.start);
+        return {
+          x,
+          y: y + m.rowHeight - RIBBON - 1,
+          width: Math.max(1, xOf(span.end) - x),
+          height: RIBBON,
+          span,
+        };
+      }),
     };
   });
 
@@ -218,8 +247,14 @@ export const layout = (tl: Timeline, axis: Axis, m: Metrics): Frame => {
     m.plotWidth,
   );
 
+  const posture = tl.posture.map((span): PostureBox => {
+    const x = xOf(span.start);
+    return { x, width: Math.max(1, xOf(span.end) - x), span };
+  });
+
   return {
     rows,
+    posture,
     links,
     gridlines: tickValues.map(scale),
     gaps,
@@ -228,20 +263,20 @@ export const layout = (tl: Timeline, axis: Axis, m: Metrics): Frame => {
   };
 };
 
-// Marks sit on the top edge of the lane's bars, merged where they would touch.
-const marksOf = (
-  requests: readonly Request[],
+// Marks sit on a bar edge, merged where they would touch.
+const marksOf = <T extends { readonly at: number }>(
+  items: readonly T[],
   xOf: (t: number) => number,
   y: number,
-): RequestMark[] => {
-  const out: RequestMark[] = [];
-  for (const r of [...requests].sort((a, b) => a.at - b.at)) {
-    const x = xOf(r.at) - MARK / 2;
+): Mark<T>[] => {
+  const out: Mark<T>[] = [];
+  for (const item of [...items].sort((a, b) => a.at - b.at)) {
+    const x = xOf(item.at) - MARK / 2;
     const prev = out.at(-1);
     if (prev && x - prev.x < MARK_MERGE) {
-      out[out.length - 1] = { ...prev, requests: [...prev.requests, r] };
+      out[out.length - 1] = { ...prev, items: [...prev.items, item] };
     } else {
-      out.push({ x, y, width: MARK, height: MARK, requests: [r] });
+      out.push({ x, y, width: MARK, height: MARK, items: [item] });
     }
   }
   return out;

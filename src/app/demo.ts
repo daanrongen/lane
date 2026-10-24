@@ -62,7 +62,13 @@ const tool = (
         start,
       },
     },
-    { _tag: "SpanClosed", spanId: id, at: end, failed },
+    {
+      _tag: "SpanClosed",
+      spanId: id,
+      at: end,
+      failed,
+      reason: failed ? "Permission to use Bash has been denied." : undefined,
+    },
   ];
 };
 
@@ -91,6 +97,20 @@ const mcp = (
     { _tag: "SpanClosed", spanId: id, at: end },
   ];
 };
+
+const mode = (
+  agentId: AgentId,
+  at: number,
+  kind: "permission" | "approval" | "sandbox" | "effort",
+  value: string,
+): RunEvent => ({ _tag: "ModeChanged", change: { agentId, at, kind, value } });
+
+const skill = (
+  agentId: AgentId,
+  at: number,
+  name: string,
+  via: "tool" | "mention" = "tool",
+): RunEvent => ({ _tag: "SkillUsed", use: { agentId, at, name, via } });
 
 const plan = (
   agentId: AgentId,
@@ -229,6 +249,14 @@ export const demoEvents: readonly RunEvent[] = [
       ],
     },
   },
+  mode(main, 0, "permission", "plan"),
+  mode(main, 0, "effort", "high"),
+  mode(main, 2, "permission", "auto"),
+  skill(main, 0.5, "basecamp:basecamp"),
+  skill(researcher, 3.6, "obsidian"),
+  skill(researcher, 6.2, "obsidian"),
+  skill(analyst, 9.7, "mise"),
+  turn(analyst, 7, "gpt-oss:20b", 900, 200),
   plan(main, 1, "todo", [
     ["Find where checkout drops", "doing"],
     ["Compare with competitors", "next"],
@@ -323,6 +351,11 @@ export const demoCodexEvents: readonly RunEvent[] = [
     "shell",
     "curl https://registry.npmjs.org/vite",
   ),
+  mode(codex, 0, "approval", "on-request"),
+  mode(codex, 0, "sandbox", "workspace-write"),
+  mode(codex, 0, "effort", "high"),
+  mode(codex, 9, "approval", "never"),
+  skill(codex, 1.5, "container", "mention"),
   plan(codex, 1, "todo", [
     ["Read the vite config", "doing"],
     ["Patch the build", "next"],
@@ -379,7 +412,7 @@ export const demoAssets: readonly Asset[] = [
     "qmd",
     "tomtom",
   ]),
-  ...skills("project", ["checkout-flow"]),
+  ...skills("project", ["checkout-flow", "obsidian", "basecamp"]),
   { _tag: "Setting", source: "claude", key: "model", value: "sonnet" },
   { _tag: "Setting", source: "claude", key: "effortLevel", value: "high" },
   { _tag: "Setting", source: "claude", key: "defaultMode", value: "auto" },

@@ -2,10 +2,21 @@ import type { Card as Task } from "@/domain/board.ts";
 import type { Cell, CellKind, ContextMap } from "@/domain/context.ts";
 import type { AgentId } from "@/domain/ids.ts";
 import type { McpServer } from "@/domain/mcp.ts";
+import type { ModelSpan, ModelUse } from "@/domain/models.ts";
 import type { HostSummary } from "@/domain/network.ts";
-import type { Request, Span } from "@/domain/run.ts";
+import type { PostureSpan } from "@/domain/posture.ts";
+import { type PermissionRule, ruleFor } from "@/domain/rules.ts";
+import type { Request, SkillUse, Span } from "@/domain/run.ts";
+import type { SkillSummary } from "@/domain/skills.ts";
 import type { Lane } from "@/domain/timeline.ts";
-import { duration, exact, percent, plural, tokens } from "@/ui/lib/format.ts";
+import {
+  clip,
+  duration,
+  exact,
+  percent,
+  plural,
+  tokens,
+} from "@/ui/lib/format.ts";
 
 export type Fact = readonly [label: string, value: string];
 
@@ -60,6 +71,7 @@ const counted = (items: readonly string[]): Fact[] => {
 export const spanCard = (
   spans: readonly Span[],
   names: ReadonlyMap<AgentId, string>,
+  rules: readonly PermissionRule[] = [],
 ): Card => {
   const start = Math.min(...spans.map((s) => s.start));
   const open = spans.some((s) => s.end === undefined);
@@ -70,6 +82,7 @@ export const spanCard = (
     ["at", duration(start)],
     ["took", open ? "running" : exact(end - start)],
     ...(bad ? [["failed", String(bad)] as const] : []),
+    ...(one ? configFacts(one, rules) : []),
   ];
   return one
     ? {
@@ -84,6 +97,28 @@ export const spanCard = (
         facts,
         list: counted(spans.map(nameOf)),
       };
+};
+
+const DENIED = /doesn't want to proceed|was denied|not allowed|permission/i;
+
+// Why a call failed, and which permission rule covers it.
+const configFacts = (s: Span, rules: readonly PermissionRule[]): Fact[] => {
+  if (s._tag !== "ToolCall" && s._tag !== "McpCall") return [];
+  const tool = s._tag === "ToolCall" ? s.tool : `mcp__${s.server}__${s.tool}`;
+  const rule = ruleFor(rules, tool, s.label);
+  return [
+    ...(s.reason
+      ? [
+          [
+            DENIED.test(s.reason) ? "blocked" : "error",
+            clip(s.reason, 34),
+          ] as Fact,
+        ]
+      : []),
+    ...(rule
+      ? [["rule", `${rule.effect} ${clip(rule.pattern, 24)}`] as Fact]
+      : []),
+  ];
 };
 
 const KINDS: Record<CellKind, string> = {
@@ -188,3 +223,71 @@ export const taskCard = (task: Task, owner: string): Card => ({
   ],
   list: [],
 });
+
+export const modelSpanCard = (span: ModelSpan, lane: string): Card => ({
+  title: span.model,
+  subtitle: `${span.provider ?? "unknown provider"} · ${lane}`,
+  facts: [
+    ["from", duration(span.start)],
+    ["until", duration(span.end)],
+    ["turns", String(span.turns)],
+    ["output", `${tokens(span.output)} tokens`],
+  ],
+  list: [],
+});
+
+export const modelUseCard = (use: ModelUse): Card => ({
+  title: use.model,
+  subtitle: use.provider ?? "unknown provider",
+  facts: [
+    ["turns", String(use.turns)],
+    ["output", `${tokens(use.output)} tokens`],
+    ["first", duration(use.first)],
+    ["last", duration(use.last)],
+  ],
+  list: [],
+});
+
+export const postureCard = (span: PostureSpan): Card => ({
+  title: span.value,
+  subtitle: `${span.kind} mode`,
+  facts: [
+    ["from", duration(span.start)],
+    ["until", duration(span.end)],
+    ...span.alongside.map(([k, v]): Fact => [k, v]),
+  ],
+  list: [],
+});
+
+// A skill's description comes from the catalog when it has one.
+export const skillCard = (s: SkillSummary, about?: string): Card => ({
+  title: s.name,
+  subtitle: about ? clip(about, 60) : "skill",
+  facts: [
+    ["used", plural(s.count, "time")],
+    ["first", duration(s.first)],
+    ["last", duration(s.last)],
+    ["via", s.via.join(", ")],
+  ],
+  list: [],
+});
+
+export const skillMarkCard = (
+  uses: readonly SkillUse[],
+  about?: string,
+): Card => {
+  const [first] = uses;
+  return uses.length === 1 && first
+    ? {
+        title: first.name,
+        subtitle: about ? clip(about, 60) : `skill, by ${first.via}`,
+        facts: [["at", duration(first.at)]],
+        list: [],
+      }
+    : {
+        title: plural(uses.length, "skill use"),
+        subtitle: "close together",
+        facts: [["at", duration(Math.min(...uses.map((u) => u.at)))]],
+        list: counted(uses.map((u) => u.name)),
+      };
+};

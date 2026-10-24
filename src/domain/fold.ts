@@ -31,7 +31,12 @@ export const fold = (run: Run, e: RunEvent): Run => {
     case "SpanClosed":
       return mapSpan(run, e.spanId, (s) =>
         s._tag === "ToolCall" || s._tag === "McpCall"
-          ? { ...s, end: e.at, failed: e.failed ?? s.failed }
+          ? {
+              ...s,
+              end: e.at,
+              failed: e.failed ?? s.failed,
+              reason: e.reason ?? s.reason,
+            }
           : { ...s, end: e.at },
       );
     case "TurnReported":

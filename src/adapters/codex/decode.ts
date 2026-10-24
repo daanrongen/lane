@@ -1,6 +1,7 @@
 import type { Decoder } from "@/adapters/shared/decoder.ts";
 import { arr, type Json, num, rec, str } from "@/adapters/shared/json.ts";
 import { statusOf } from "@/adapters/shared/planText.ts";
+import { reasonOf } from "@/adapters/shared/reason.ts";
 import { requestEvents, SEARCH_HOST } from "@/adapters/shared/requests.ts";
 import { sizeOf, tokensOf } from "@/adapters/shared/sizing.ts";
 import type { RunEvent } from "@/domain/events.ts";
@@ -125,6 +126,7 @@ export const makeCodexDecoder = (cfg: CodexConfig): Decoder => {
         spanId: SpanId(id),
         at,
         failed: failedOutput(output),
+        reason: failedOutput(output) ? reasonOf(output) : undefined,
       },
     ];
   };

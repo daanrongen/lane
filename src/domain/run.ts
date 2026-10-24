@@ -41,12 +41,16 @@ export type Span =
       readonly _tag: "ToolCall";
       readonly tool: string;
       readonly failed: boolean;
+      // The first line of the error, when it failed.
+      readonly reason?: string;
     })
   | (SpanBase & {
       readonly _tag: "McpCall";
       readonly server: string;
       readonly tool: string;
       readonly failed: boolean;
+      // The first line of the error, when it failed.
+      readonly reason?: string;
     })
   | (SpanBase & { readonly _tag: "Waiting"; readonly on: AgentId });
 

@@ -68,3 +68,23 @@ export const cellLook = (kind: CellKind, theme: Theme) => {
 // Each harness gets one hue, so sessions read apart at a glance.
 export const harnessColor = (harness: HarnessId, theme: Theme) =>
   ({ claude: theme.agents[2], codex: theme.agents[3] })[harness] ?? theme.dim;
+
+// Who served the model, so a ribbon shows at a glance when the provider changed.
+export const providerColor = (provider: string | undefined, theme: Theme) =>
+  ({
+    anthropic: theme.agents[2],
+    openai: theme.agents[4],
+    ollama: theme.text,
+  })[provider ?? ""] ?? theme.dim;
+
+// How freely the agent may act: loud when it acts without asking.
+export const modeColor = (value: string, theme: Theme) =>
+  ({
+    plan: theme.agents[1],
+    auto: theme.running,
+    acceptEdits: theme.agents[0],
+    bypassPermissions: theme.failed,
+    never: theme.running,
+    "on-failure": theme.agents[0],
+    untrusted: theme.agents[2],
+  })[value] ?? theme.dim;

@@ -5,7 +5,9 @@ import { useMetrics, useTheme } from "@/ui/lib/context.ts";
 import type { Frame } from "@/ui/lib/layout.ts";
 import { alpha, laneColor } from "@/ui/lib/theme.ts";
 import { Bar } from "@/ui/molecules/Bar.tsx";
+import { ModelRibbon } from "@/ui/molecules/ModelRibbon.tsx";
 import { RequestMark } from "@/ui/molecules/RequestMark.tsx";
+import { SkillMark } from "@/ui/molecules/SkillMark.tsx";
 
 export const TimelinePlot = ({ frame }: { frame: Frame }) => {
   const r = useMetrics();
@@ -44,9 +46,27 @@ export const TimelinePlot = ({ frame }: { frame: Frame }) => {
         )),
       )}
       {frame.rows.flatMap((row, i) =>
-        row.marks.map((mark) => (
+        row.requests.map((mark) => (
           <RequestMark
             key={`${row.lane.agent.id}:mark:${mark.x}`}
+            mark={mark}
+            color={laneColor(theme, i)}
+          />
+        )),
+      )}
+      {frame.rows.flatMap((row) =>
+        row.models.map((box) => (
+          <ModelRibbon
+            key={`${row.lane.agent.id}:model:${box.x}`}
+            box={box}
+            lane={row.lane.agent.name}
+          />
+        )),
+      )}
+      {frame.rows.flatMap((row, i) =>
+        row.skills.map((mark) => (
+          <SkillMark
+            key={`${row.lane.agent.id}:skill:${mark.x}`}
             mark={mark}
             color={laneColor(theme, i)}
           />

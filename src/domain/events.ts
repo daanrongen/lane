@@ -29,6 +29,7 @@ export type RunEvent =
       readonly spanId: SpanId;
       readonly at: number;
       readonly failed?: boolean;
+      readonly reason?: string;
     }
   | { readonly _tag: "TurnReported"; readonly turn: Turn }
   | { readonly _tag: "ContextAdded"; readonly entry: Entry }

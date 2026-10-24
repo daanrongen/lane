@@ -1,7 +1,8 @@
+import { ofKind } from "@/domain/assets.ts";
 import type { AgentId } from "@/domain/ids.ts";
 import { isFailed } from "@/domain/timeline.ts";
 import { spanCard } from "@/ui/lib/cards.ts";
-import { useTheme } from "@/ui/lib/context.ts";
+import { useCatalog, useTheme } from "@/ui/lib/context.ts";
 import type { BarBox } from "@/ui/lib/layout.ts";
 import { barLook } from "@/ui/lib/look.ts";
 import { Hover } from "@/ui/molecules/Hover.tsx";
@@ -17,9 +18,10 @@ export const Bar = ({
   names: ReadonlyMap<AgentId, string>;
 }) => {
   const theme = useTheme();
+  const catalog = useCatalog();
   return (
     <Hover
-      card={() => spanCard(box.spans, names)}
+      card={() => spanCard(box.spans, names, ofKind(catalog, "Rule"))}
       accent={color}
       box={{
         position: "absolute",

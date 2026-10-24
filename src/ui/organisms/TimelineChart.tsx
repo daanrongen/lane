@@ -3,6 +3,7 @@ import { useMetrics } from "@/ui/lib/context.ts";
 import type { Frame } from "@/ui/lib/layout.ts";
 import { PlotLabel } from "@/ui/molecules/PlotLabel.tsx";
 import { LaneLabels } from "@/ui/organisms/LaneLabels.tsx";
+import { PostureBand } from "@/ui/organisms/PostureBand.tsx";
 import { TimelinePlot } from "@/ui/organisms/TimelinePlot.tsx";
 
 // Lane labels on the left, the plot on the right, the time axis underneath.
@@ -10,6 +11,7 @@ export const TimelineChart = ({ frame }: { frame: Frame }) => {
   const r = useMetrics();
   return (
     <Column gap={Math.round(r.pad / 3)}>
+      {frame.posture.length ? <PostureBand boxes={frame.posture} /> : null}
       <Row align="flex-start">
         <LaneLabels rows={frame.rows} />
         <TimelinePlot frame={frame} />

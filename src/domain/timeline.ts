@@ -1,4 +1,6 @@
 import type { AgentId } from "@/domain/ids.ts";
+import { type ModelSpan, modelSpans } from "@/domain/models.ts";
+import { type PostureSpan, posture } from "@/domain/posture.ts";
 import {
   type Agent,
   addUsage,
@@ -6,6 +8,7 @@ import {
   type Handoff,
   type Request,
   type Run,
+  type SkillUse,
   type Span,
   type Turn,
   type Usage,
@@ -27,6 +30,8 @@ export interface Lane {
   readonly model?: string;
   readonly lastTurn?: Turn;
   readonly requests: readonly Request[];
+  readonly skills: readonly SkillUse[];
+  readonly models: readonly ModelSpan[];
   readonly lastActivity: number;
   // Finished after its last activity; an unfinished agent may only be stalled.
   readonly finished: boolean;
@@ -34,6 +39,7 @@ export interface Lane {
 
 export interface Timeline {
   readonly lanes: readonly Lane[];
+  readonly posture: readonly PostureSpan[];
   readonly links: readonly Handoff[];
   readonly duration: number;
   readonly usage: Usage;
@@ -108,6 +114,16 @@ export const timeline = (run: Run, now: number): Timeline => {
       model: lastTurn?.model,
       lastTurn,
       requests: run.requests.filter((r) => r.agentId === agent.id),
+      skills: run.skills.filter((u) => u.agentId === agent.id),
+      models: modelSpans(
+        turns,
+        Math.min(
+          ...bars.map((b) => b.start),
+          ...turns.map((t) => t.at),
+          lastActivity,
+        ),
+        lastActivity,
+      ),
       lastActivity,
       finished: finishedAt !== undefined && finishedAt >= lastActivity,
     };
@@ -126,6 +142,7 @@ export const timeline = (run: Run, now: number): Timeline => {
 
   return {
     lanes,
+    posture: posture(run.modes, Math.max(0, ...ends)),
     links,
     duration: Math.max(0, ...ends),
     usage: run.turns.reduce((u, t) => addUsage(u, t.usage), emptyUsage),
