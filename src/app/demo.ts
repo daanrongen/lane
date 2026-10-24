@@ -3,6 +3,7 @@ import { AgentId, SessionId, SpanId } from "@/domain/ids.ts";
 import type { Session } from "@/domain/session.ts";
 
 export const demoSession: Session = {
+  harness: "claude",
   id: SessionId("demo"),
   cwd: "~/Developer/checkout",
   pid: 1,

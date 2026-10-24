@@ -1,8 +1,9 @@
 import { Effect, Stream, SubscriptionRef } from "effect";
 import { fold } from "@/domain/fold.ts";
-import type { SessionId } from "@/domain/ids.ts";
 import { emptyRun, type Run } from "@/domain/run.ts";
-import { RunSource } from "@/ports/RunSource.ts";
+import type { Session } from "@/domain/session.ts";
+import { Harnesses } from "@/ports/Harness.ts";
+import { SourceError } from "@/ports/SourceError.ts";
 
 export type RunStatus = "reading" | "ended" | "failed";
 
@@ -12,13 +13,19 @@ export interface OpenRun {
 }
 
 // Folds a session's events into a Run until the scope closes.
-export const openRun = (id: SessionId) =>
+export const openRun = (session: Session) =>
   Effect.gen(function* () {
-    const source = yield* RunSource;
-    const run = yield* SubscriptionRef.make(emptyRun(id, 0));
+    const harnesses = yield* Harnesses;
+    const run = yield* SubscriptionRef.make(emptyRun(session.id, 0));
     const status = yield* SubscriptionRef.make<RunStatus>("reading");
 
-    yield* source.events(id).pipe(
+    const source = harnesses.find((h) => h.id === session.harness);
+    const events = source
+      ? source.events(session)
+      : Stream.fail(
+          new SourceError({ message: `no ${session.harness} harness` }),
+        );
+    yield* events.pipe(
       // One update per batch keeps a long replay from flooding subscribers.
       Stream.groupedWithin(256, "50 millis"),
       Stream.runForEach((batch) =>

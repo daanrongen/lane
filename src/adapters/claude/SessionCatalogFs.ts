@@ -12,6 +12,7 @@ export const parseSession = (raw: unknown): Session | undefined => {
   const cwd = str(r?.cwd);
   if (!id || !cwd || typeof r?.pid !== "number") return undefined;
   return {
+    harness: "claude",
     id: SessionId(id),
     cwd,
     pid: r.pid,

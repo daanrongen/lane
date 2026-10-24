@@ -22,6 +22,7 @@ const entry = (pid: number, extra = {}) =>
 describe("parseSession", () => {
   test("maps the registry file", () => {
     expect(parseSession(JSON.parse(entry(1, { name: "n" })))).toEqual({
+      harness: "claude",
       id: SessionId("s1"),
       cwd: "/x",
       pid: 1,

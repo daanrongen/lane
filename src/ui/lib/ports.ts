@@ -1,4 +1,3 @@
-import type { SessionId } from "@/domain/ids.ts";
 import type { Run } from "@/domain/run.ts";
 import type { Session } from "@/domain/session.ts";
 
@@ -18,7 +17,7 @@ export interface OpenedRun {
 // All the UI knows of the app: no Effect types cross this line.
 export interface UiPorts {
   readonly sessions: Store<readonly Session[]>;
-  readonly open: (id: SessionId) => Promise<OpenedRun>;
+  readonly open: (session: Session) => Promise<OpenedRun>;
 }
 
 export interface Keys {

@@ -1,14 +1,17 @@
 import { describe, expect, test } from "bun:test";
 import { Effect, Layer, Schedule, SubscriptionRef } from "effect";
+import { RunSourceMemory } from "@/adapters/memory/RunSourceMemory.ts";
 import { SessionCatalogMemory } from "@/adapters/memory/SessionCatalogMemory.ts";
 import { SessionsStore, SessionsStoreLive } from "@/app/SessionsStore.ts";
 import { until } from "@/app/testing.ts";
 import { SessionId } from "@/domain/ids.ts";
 import type { Session } from "@/domain/session.ts";
+import { harness, harnessesOf } from "@/ports/Harness.ts";
 import { SessionCatalog } from "@/ports/SessionCatalog.ts";
 import { SourceError } from "@/ports/SourceError.ts";
 
 const session = (id: string): Session => ({
+  harness: "claude",
   id: SessionId(id),
   cwd: "/x",
   pid: 1,
@@ -23,7 +26,15 @@ const run = <A, E>(
 ) =>
   Effect.runPromise(
     self.pipe(
-      Effect.provide(SessionsStoreLive(poll).pipe(Layer.provide(catalog))),
+      Effect.provide(
+        SessionsStoreLive(poll).pipe(
+          Layer.provide(
+            harnessesOf(
+              harness("claude", Layer.merge(catalog, RunSourceMemory({}))),
+            ),
+          ),
+        ),
+      ),
       Effect.scoped,
     ),
   );
@@ -63,6 +74,37 @@ describe("SessionsStore", () => {
         expect(yield* read).toHaveLength(1);
       }),
       flaky,
+    );
+  });
+});
+
+describe("SessionsStore across harnesses", () => {
+  test("merges every harness, newest first", () => {
+    const codex = { ...session("c"), harness: "codex", updatedAt: 9 } as const;
+    const of = (s: Session) =>
+      harness(
+        s.harness,
+        Layer.merge(
+          SessionCatalogMemory(() => [s]),
+          RunSourceMemory({}),
+        ),
+      );
+    return Effect.runPromise(
+      Effect.gen(function* () {
+        const { sessions } = yield* SessionsStore;
+        const seen = yield* until(
+          SubscriptionRef.get(sessions),
+          (s) => s.length === 2,
+        );
+        expect(seen.map((s) => s.harness)).toEqual(["codex", "claude"]);
+      }).pipe(
+        Effect.provide(
+          SessionsStoreLive(poll).pipe(
+            Layer.provide(harnessesOf(of(session("a")), of(codex))),
+          ),
+        ),
+        Effect.scoped,
+      ),
     );
   });
 });

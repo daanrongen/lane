@@ -1,6 +1,6 @@
 import { useWindowSize } from "@gpuix/react";
-import { useEffect, useState } from "react";
-import type { SessionId } from "@/domain/ids.ts";
+import { useEffect, useRef, useState } from "react";
+import type { Session } from "@/domain/session.ts";
 import { Box } from "@/ui/atoms/Box.tsx";
 import { Text } from "@/ui/atoms/Text.tsx";
 import { MetricsContext } from "@/ui/lib/context.ts";
@@ -18,13 +18,18 @@ const ZOOM = { min: 0.6, max: 2.4, step: 0.1 };
 const clampZoom = (z: number) =>
   Math.round(Math.min(ZOOM.max, Math.max(ZOOM.min, z)) * 10) / 10;
 
-const useOpened = (ports: UiPorts, id: SessionId | undefined) => {
+const useOpened = (ports: UiPorts, session: Session | undefined) => {
   const [opened, setOpened] = useState<OpenedRun>();
+  const latest = useRef(session);
+  latest.current = session;
+  const key = session && `${session.harness}:${session.id}`;
+  // Polls replace the session objects, so only the key decides when to reopen.
   useEffect(() => {
-    if (!id) return;
+    const target = latest.current;
+    if (!target) return;
     let cancelled = false;
     let current: OpenedRun | undefined;
-    ports.open(id).then((o) => {
+    ports.open(target).then((o) => {
       if (cancelled) return o.close();
       current = o;
       setOpened(o);
@@ -34,7 +39,7 @@ const useOpened = (ports: UiPorts, id: SessionId | undefined) => {
       current?.close();
       setOpened(undefined);
     };
-  }, [ports, id]);
+  }, [ports, key]);
   return opened;
 };
 
@@ -53,7 +58,7 @@ export const DashboardPage = ({
   const last = Math.max(0, sessions.length - 1);
   const current = Math.min(index, last);
   const selected = sessions[current];
-  const opened = useOpened(ports, selected?.id);
+  const opened = useOpened(ports, selected);
   const many = sessions.length > 1;
 
   useEffect(
