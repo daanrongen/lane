@@ -1,5 +1,6 @@
 import type { Decoder } from "@/adapters/shared/decoder.ts";
 import { arr, type Json, num, rec, str } from "@/adapters/shared/json.ts";
+import { planItems, statusOf } from "@/adapters/shared/planText.ts";
 import {
   fetchTarget,
   requestEvents,
@@ -14,6 +15,7 @@ import {
 import type { RunEvent } from "@/domain/events.ts";
 import { AgentId, SpanId } from "@/domain/ids.ts";
 import { mcpName } from "@/domain/mcp.ts";
+import { providerOf } from "@/domain/models.ts";
 import { type Target, targetsOfCommand } from "@/domain/network.ts";
 import type { Agent, Entry, Usage } from "@/domain/run.ts";
 
@@ -90,6 +92,10 @@ export const makeDecoder = (cfg: DecoderConfig): Decoder => {
   const ended = new Set<string>();
   const spans = new Map<string, boolean>(); // tool_use id -> closed
   const sources = new Map<string, Pick<Entry, "kind" | "label">>();
+  let permission: string | undefined;
+  const shownQueue = "";
+  // Prompts typed while the agent was busy; `shown` is false for hand-backs from sub-agents.
+  let queued: { title: string; shown: boolean }[] = [];
   let announced = false;
   let boundary: number | undefined;
   let last = 0;
@@ -182,11 +188,82 @@ export const makeDecoder = (cfg: DecoderConfig): Decoder => {
     const entry = [
       ...added(at, source, sizeOf(b.input)),
       ...requestEvents(agentId, at, name, targetsOf(name, input)),
+      ...intents(name, input, at),
     ];
     if (!SPAWN_TOOLS.has(name))
       return [...entry, ...called(id, name, input, at)];
     pending.set(id, { name, input, at });
     return [...entry, ...resolve(id, false)];
+  };
+
+  // What a tool call says about the work: skills used, plans and task lists.
+  const intents = (
+    name: string,
+    input: Json | undefined,
+    at: number,
+  ): RunEvent[] => {
+    const plan = (
+      source: "plan" | "todo",
+      items: readonly { title: string; status: "next" | "doing" | "done" }[],
+    ): RunEvent[] =>
+      items.length
+        ? [{ _tag: "PlanReported", plan: { agentId, at, source, items } }]
+        : [];
+    switch (name) {
+      case "Skill": {
+        const skill = str(input?.skill);
+        return skill
+          ? [
+              {
+                _tag: "SkillUsed",
+                use: { agentId, at, name: skill, via: "tool" },
+              },
+            ]
+          : [];
+      }
+      case "ExitPlanMode":
+        return plan("plan", planItems(str(input?.plan) ?? ""));
+      case "TodoWrite":
+        return plan(
+          "todo",
+          arr(input?.todos).flatMap((t) => {
+            const title = str(rec(t)?.content);
+            return title ? [{ title, status: statusOf(rec(t)?.status) }] : [];
+          }),
+        );
+      default:
+        return [];
+    }
+  };
+
+  const modeChanged = (value: string | undefined): RunEvent[] => {
+    if (!value || value === permission) return [];
+    permission = value;
+    return [
+      {
+        _tag: "ModeChanged",
+        change: { agentId, at: last, kind: "permission", value },
+      },
+    ];
+  };
+
+  // The queue as it stands after one operation.
+  const queueOp = (line: Json, at: number): RunEvent[] => {
+    const op = str(line.operation);
+    const content = str(line.content) ?? "";
+    if (op === "enqueue") {
+      const title = content.split("\n")[0]?.slice(0, 70) ?? "";
+      queued = [...queued, { title, shown: !content.startsWith("<") }];
+    } else if (op === "dequeue") queued = queued.slice(1);
+    else if (op === "remove") queued = queued.slice(0, -1);
+    else if (op === "popAll") queued = [];
+    else return [];
+    const items = queued
+      .filter((q) => q.shown)
+      .map((q) => ({ title: q.title, status: "next" as const }));
+    return [
+      { _tag: "PlanReported", plan: { agentId, at, source: "queue", items } },
+    ];
   };
 
   // The snapshot sizes the system prompt and each tool definition.
@@ -232,6 +309,7 @@ export const makeDecoder = (cfg: DecoderConfig): Decoder => {
           agentId,
           at,
           model: str(msg.model),
+          provider: providerOf(str(msg.model)),
           usage: usageOf(rec(msg.usage)),
         },
       });
@@ -308,6 +386,10 @@ export const makeDecoder = (cfg: DecoderConfig): Decoder => {
   return {
     push(raw) {
       const line = rec(raw);
+      // Mode changes carry no timestamp.
+      if (line?.type === "permission-mode") {
+        return modeChanged(str(line.permissionMode));
+      }
       const ts = Date.parse(str(line?.timestamp) ?? "");
       if (!line || Number.isNaN(ts)) return [];
       const at = (ts - cfg.origin) / 1000;
@@ -318,6 +400,7 @@ export const makeDecoder = (cfg: DecoderConfig): Decoder => {
           ? [{ _tag: "ContextCompacted", agentId, at }]
           : [];
       }
+      if (type === "queue-operation") return queueOp(line, at);
       if (type === "attachment") {
         const attachment = rec(line.attachment);
         return [...setup(attachment, at), ...reminder(attachment, at)];

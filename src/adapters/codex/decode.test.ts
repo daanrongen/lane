@@ -116,4 +116,57 @@ describe("makeCodexDecoder", () => {
       ["web search", "web_search"],
     ]);
   });
+
+  test("approval policy and effort are recorded when they change", () => {
+    const turn = (t: number, approval: string, effort: string) => ({
+      timestamp: `2026-01-01T00:00:0${t}Z`,
+      type: "turn_context",
+      payload: {
+        model: "gpt-5.5",
+        approval_policy: approval,
+        effort,
+        sandbox_policy: { type: "workspace-write" },
+      },
+    });
+    const { run } = decode([
+      turn(1, "on-request", "high"),
+      turn(2, "on-request", "low"),
+    ]);
+    expect(run.modes.map((m) => [m.kind, m.value])).toEqual([
+      ["approval", "on-request"],
+      ["sandbox", "workspace-write"],
+      ["effort", "high"],
+      ["effort", "low"],
+    ]);
+  });
+
+  test("update_plan is a task list, a named skill is a mention, the provider comes from the meta", () => {
+    const { run } = decode([
+      {
+        ...meta(0),
+        payload: { ...(meta(0).payload as object), model_provider: "ollama" },
+      },
+      call(1, "c1", "update_plan", {
+        plan: [
+          { step: "a", status: "completed" },
+          { step: "b", status: "pending" },
+        ],
+      }),
+      {
+        timestamp: "2026-01-01T00:00:02Z",
+        type: "event_msg",
+        payload: {
+          type: "item_completed",
+          item: {
+            type: "UserMessage",
+            content: [{ type: "skill", name: "container" }],
+          },
+        },
+      },
+      model(3),
+    ]);
+    expect(run.plans[0]?.items.map((i) => i.status)).toEqual(["done", "next"]);
+    expect(run.skills[0]).toMatchObject({ name: "container", via: "mention" });
+    expect(run.turns.at(-1)?.provider).toBe("ollama");
+  });
 });

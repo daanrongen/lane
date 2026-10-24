@@ -70,6 +70,8 @@ export interface Turn {
   readonly usage: Usage;
   // The context window, when the harness reports it.
   readonly window?: number;
+  // Who served the model: anthropic, openai, ollama.
+  readonly provider?: string;
 }
 
 // Something that entered an agent's context; tokens are estimated from its size.
@@ -89,6 +91,37 @@ export interface Request {
   readonly host: string;
   readonly via: string;
   readonly label: string;
+}
+
+// A skill the agent invoked, by tool call or because the user named it.
+export interface SkillUse {
+  readonly agentId: AgentId;
+  readonly at: number;
+  readonly name: string;
+  readonly via: "tool" | "mention";
+}
+
+// How the agent was allowed to act changed: permission mode, approval policy, sandbox or effort.
+export interface ModeChange {
+  readonly agentId: AgentId;
+  readonly at: number;
+  readonly kind: "permission" | "approval" | "sandbox" | "effort";
+  readonly value: string;
+}
+
+export type TaskStatus = "next" | "doing" | "done";
+
+export interface TaskItem {
+  readonly title: string;
+  readonly status: TaskStatus;
+}
+
+// One snapshot of a task list; a later one from the same source replaces it.
+export interface Plan {
+  readonly agentId: AgentId;
+  readonly at: number;
+  readonly source: "todo" | "plan" | "queue" | "goal";
+  readonly items: readonly TaskItem[];
 }
 
 export interface Tool {
@@ -116,6 +149,9 @@ export interface Run {
   readonly context: readonly Entry[];
   readonly setups: readonly Setup[];
   readonly requests: readonly Request[];
+  readonly skills: readonly SkillUse[];
+  readonly modes: readonly ModeChange[];
+  readonly plans: readonly Plan[];
 }
 
 export const emptyRun = (sessionId: SessionId, startedAt: number): Run => ({
@@ -129,4 +165,7 @@ export const emptyRun = (sessionId: SessionId, startedAt: number): Run => ({
   context: [],
   setups: [],
   requests: [],
+  skills: [],
+  modes: [],
+  plans: [],
 });

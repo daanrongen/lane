@@ -1,13 +1,15 @@
 import type { Decoder } from "@/adapters/shared/decoder.ts";
 import { arr, type Json, num, rec, str } from "@/adapters/shared/json.ts";
+import { statusOf } from "@/adapters/shared/planText.ts";
 import { requestEvents, SEARCH_HOST } from "@/adapters/shared/requests.ts";
 import { sizeOf, tokensOf } from "@/adapters/shared/sizing.ts";
 import type { RunEvent } from "@/domain/events.ts";
 import type { AgentId } from "@/domain/ids.ts";
 import { SpanId } from "@/domain/ids.ts";
 import { mcpName } from "@/domain/mcp.ts";
+import { providerOf } from "@/domain/models.ts";
 import { targetsOfCommand } from "@/domain/network.ts";
-import { type Entry, emptyUsage } from "@/domain/run.ts";
+import { type Entry, emptyUsage, type ModeChange } from "@/domain/run.ts";
 
 export interface CodexConfig {
   // Epoch ms of the run start; event times are seconds from here.
@@ -51,6 +53,8 @@ export const makeCodexDecoder = (cfg: CodexConfig): Decoder => {
   let last = 0;
   let window: number | undefined;
   let model: string | undefined;
+  let provider: string | undefined;
+  const modes = new Map<string, string>();
 
   const added = (at: number, source: Source, chars: number): RunEvent[] =>
     chars > 0
@@ -168,6 +172,11 @@ export const makeCodexDecoder = (cfg: CodexConfig): Decoder => {
       }
       case "function_call": {
         const name = str(p.name) ?? "tool";
+        if (name === "update_plan")
+          return [
+            ...planEvents(p, at),
+            ...call(p, name, p.arguments, name, at),
+          ];
         return call(
           p,
           name,
@@ -198,6 +207,49 @@ export const makeCodexDecoder = (cfg: CodexConfig): Decoder => {
     }
   };
 
+  // Approval policy, sandbox and effort, reported when they change.
+  const modeEvents = (p: Json, at: number): RunEvent[] => {
+    const now: [ModeChange["kind"], string | undefined][] = [
+      ["approval", str(p.approval_policy)],
+      ["sandbox", str(rec(p.sandbox_policy)?.type)],
+      ["effort", str(p.effort)],
+    ];
+    return now.flatMap(([kind, value]) => {
+      if (!value || modes.get(kind) === value) return [];
+      modes.set(kind, value);
+      return [
+        { _tag: "ModeChanged", change: { agentId, at, kind, value } } as const,
+      ];
+    });
+  };
+
+  // `update_plan` carries the agent's whole plan each time.
+  const planEvents = (p: Json, at: number): RunEvent[] => {
+    const items = arr(parseArgs(p.arguments)?.plan).flatMap((step) => {
+      const title = str(rec(step)?.step);
+      return title ? [{ title, status: statusOf(rec(step)?.status) }] : [];
+    });
+    return items.length
+      ? [{ _tag: "PlanReported", plan: { agentId, at, source: "todo", items } }]
+      : [];
+  };
+
+  // A skill the user named in their message.
+  const mentions = (item: Json | undefined, at: number): RunEvent[] =>
+    item?.type === "UserMessage"
+      ? arr(item.content).flatMap((c) => {
+          const name = rec(c)?.type === "skill" ? str(rec(c)?.name) : undefined;
+          return name
+            ? [
+                {
+                  _tag: "SkillUsed",
+                  use: { agentId, at, name, via: "mention" },
+                } as const,
+              ]
+            : [];
+        })
+      : [];
+
   const usage = (info: Json): RunEvent[] => {
     const u = rec(info.last_token_usage);
     if (!u) return [];
@@ -210,6 +262,7 @@ export const makeCodexDecoder = (cfg: CodexConfig): Decoder => {
           agentId,
           at: last,
           model,
+          provider: provider ?? providerOf(model),
           window: num(info.model_context_window) || window,
           usage: {
             input: Math.max(0, input - cached),
@@ -236,12 +289,15 @@ export const makeCodexDecoder = (cfg: CodexConfig): Decoder => {
         return [{ _tag: "AgentFinished", agentId, at }];
       case "context_compacted":
         return [{ _tag: "ContextCompacted", agentId, at }];
+      case "item_completed":
+        return mentions(rec(p.item), at);
       default:
         return [];
     }
   };
 
   const meta = (p: Json, at: number): RunEvent[] => {
+    provider = str(p.model_provider) ?? provider;
     const instructions = rec(p.base_instructions);
     const system = tokensOf(sizeOf(instructions?.text ?? instructions));
     return system > 0
@@ -257,9 +313,17 @@ export const makeCodexDecoder = (cfg: CodexConfig): Decoder => {
         model = str(p.model) ?? model;
         // Usage arrives later; the turn already says which model and window.
         return [
+          ...modeEvents(p, at),
           {
             _tag: "TurnReported",
-            turn: { agentId, at, model, window, usage: emptyUsage },
+            turn: {
+              agentId,
+              at,
+              model,
+              window,
+              provider: provider ?? providerOf(model),
+              usage: emptyUsage,
+            },
           },
         ];
       case "compacted":

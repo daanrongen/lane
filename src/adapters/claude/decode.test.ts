@@ -340,3 +340,81 @@ describe("network requests", () => {
     ]);
   });
 });
+
+describe("how the work is steered", () => {
+  const fold = (lines: unknown[]) =>
+    foldAll(emptyRun(SessionId("s"), 0), decodeAll(cfg, lines));
+
+  test("a Skill call is a skill use", () => {
+    const run = fold([
+      assistant(1, "m1", [toolUse("t1", "Skill", { skill: "obsidian" })]),
+    ]);
+    expect(run.skills).toEqual([
+      { agentId: main, at: 1, name: "obsidian", via: "tool" },
+    ]);
+  });
+
+  test("permission mode changes are recorded once each", () => {
+    const run = fold([
+      assistant(1, "m1", [{ type: "text" }]),
+      { type: "permission-mode", permissionMode: "plan" },
+      { type: "permission-mode", permissionMode: "plan" },
+      assistant(4, "m2", [{ type: "text" }]),
+      { type: "permission-mode", permissionMode: "auto" },
+    ]);
+    expect(run.modes.map((m) => [m.value, m.at])).toEqual([
+      ["plan", 1],
+      ["auto", 4],
+    ]);
+  });
+
+  test("an approved plan, todos and the prompt queue become task lists", () => {
+    const run = fold([
+      assistant(1, "m1", [
+        toolUse("t1", "ExitPlanMode", { plan: "## 1. Build\n## 2. Ship" }),
+        toolUse("t2", "TodoWrite", {
+          todos: [
+            { content: "write", status: "completed" },
+            { content: "test", status: "in_progress" },
+          ],
+        }),
+      ]),
+      {
+        type: "queue-operation",
+        operation: "enqueue",
+        content: "then do x",
+        timestamp: iso(3),
+      },
+      {
+        type: "queue-operation",
+        operation: "enqueue",
+        content: "<agent-message>",
+        timestamp: iso(4),
+      },
+    ]);
+    const by = (source: string) =>
+      run.plans
+        .filter((p) => p.source === source)
+        .at(-1)
+        ?.items.map((i) => [i.title, i.status]);
+    expect(by("plan")).toEqual([
+      ["Build", "next"],
+      ["Ship", "next"],
+    ]);
+    expect(by("todo")).toEqual([
+      ["write", "done"],
+      ["test", "doing"],
+    ]);
+    expect(by("queue")).toEqual([["then do x", "next"]]);
+  });
+
+  test("a turn knows its provider", () => {
+    const run = fold([
+      {
+        ...assistant(1, "m1", [{ type: "text" }]),
+        message: { id: "m1", model: "gpt-oss:20b", content: [], usage: {} },
+      },
+    ]);
+    expect(run.turns[0]?.provider).toBe("ollama");
+  });
+});
