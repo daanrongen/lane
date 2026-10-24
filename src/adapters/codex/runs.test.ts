@@ -1,3 +1,4 @@
+import { Database } from "bun:sqlite";
 import { describe, expect, test } from "bun:test";
 import { Effect, FileSystem, Layer, Schedule, Stream } from "effect";
 import { jsonl, runFs } from "@/adapters/claude/fixtures.ts";
@@ -76,6 +77,78 @@ describe("RunSourceCodex", () => {
           Effect.flip,
         );
         expect(error._tag).toBe("SourceError");
+      }),
+    ));
+
+  test("goals and queued prompts from SQLite become task lists, spawned threads become lanes", () =>
+    runFs(
+      Effect.gen(function* () {
+        const fs = yield* FileSystem.FileSystem;
+        const home = yield* fs.makeTempDirectoryScoped();
+        const dir = `${home}/sessions/2026/01/01`;
+        yield* fs.makeDirectory(dir, { recursive: true });
+        yield* fs.writeFileString(
+          `${dir}/rollout-t-${SID}.jsonl`,
+          jsonl([meta(0, SID), started(0), finished(4)]),
+        );
+        yield* fs.writeFileString(
+          `${dir}/rollout-t-kid.jsonl`,
+          jsonl([
+            meta(1, "kid"),
+            started(1),
+            call(2, "c1", "shell", { command: ["ls"] }),
+            output(3, "c1", "ok"),
+            finished(4),
+          ]),
+        );
+
+        const goals = new Database(`${home}/goals_1.sqlite`);
+        goals.run(
+          "create table thread_goals (thread_id text, objective text, status text, created_at_ms integer)",
+        );
+        goals.run(
+          `insert into thread_goals values ('${SID}', 'ship it', 'active', 1)`,
+        );
+        goals.close();
+        const queue = new Database(`${home}/queue_1.sqlite`);
+        queue.run(
+          "create table queued_items (thread_id text, payload_json text, queue_order integer)",
+        );
+        queue.run(
+          `insert into queued_items values ('${SID}', '{"text":"then deploy"}', 1)`,
+        );
+        queue.close();
+        const state = new Database(`${home}/state_5.sqlite`);
+        state.run(
+          "create table thread_spawn_edges (parent_thread_id text, child_thread_id text, status text)",
+        );
+        state.run(
+          `insert into thread_spawn_edges values ('${SID}', 'kid', 'running')`,
+        );
+        state.close();
+
+        const events = yield* RunSource.use((r) =>
+          Stream.runCollect(r.events(SID)),
+        ).pipe(
+          Effect.provide(
+            RunSourceCodex(Schedule.once).pipe(
+              Layer.provide(CodexHome.layer(home)),
+            ),
+          ),
+        );
+        const run = foldAll(emptyRun(SID, 0), events);
+        const by = (source: string) =>
+          run.plans
+            .find((p) => p.source === source)
+            ?.items.map((i) => [i.title, i.status]);
+        expect(by("goal")).toEqual([["ship it", "doing"]]);
+        expect(by("queue")).toEqual([["then deploy", "next"]]);
+        expect(
+          timeline(run, 0).lanes.map((l) => [String(l.agent.id), l.depth]),
+        ).toEqual([
+          ["main", 0],
+          ["kid", 1],
+        ]);
       }),
     ));
 });

@@ -15,6 +15,9 @@ export interface CodexConfig {
   // Epoch ms of the run start; event times are seconds from here.
   readonly origin: number;
   readonly agentId: AgentId;
+  // Set for a thread another one spawned.
+  readonly parentId?: AgentId;
+  readonly name?: string;
 }
 
 type Source = Pick<Entry, "kind" | "label">;
@@ -351,7 +354,11 @@ export const makeCodexDecoder = (cfg: CodexConfig): Decoder => {
         announced = true;
         events.push({
           _tag: "AgentSpawned",
-          agent: { id: agentId, parentId: null, name: "codex" },
+          agent: {
+            id: agentId,
+            parentId: cfg.parentId ?? null,
+            name: cfg.name ?? "codex",
+          },
           at,
         });
       }
