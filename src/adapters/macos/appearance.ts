@@ -1,9 +1,19 @@
+import { readScheme } from "@/adapters/macos/effectiveAppearance.ts";
+
 export type Scheme = "dark" | "light";
 
-const probe = new URL("./effectiveAppearance.ts", import.meta.url).pathname;
+const FLAG = "--appearance";
+
+// A fresh process sees the current appearance, so the app re-runs itself to ask.
+// Its entry point calls this first, which keeps the compiled binary self-contained.
+export const answerAppearanceQuery = () => {
+  if (!process.argv.includes(FLAG)) return;
+  console.log(readScheme());
+  process.exit(0);
+};
 
 const read = async (): Promise<Scheme> => {
-  const proc = Bun.spawn([process.execPath, probe], {
+  const proc = Bun.spawn([process.execPath, ...process.argv.slice(1), FLAG], {
     stdout: "pipe",
     stderr: "ignore",
   });

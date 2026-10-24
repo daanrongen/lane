@@ -4,3 +4,4 @@ dist
 *.log
 shot*.png
 .claude/settings.local.json
+.*.bun-build

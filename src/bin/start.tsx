@@ -1,6 +1,9 @@
 import { render } from "@gpuix/react";
 import type { Layer } from "effect";
-import { watchScheme } from "@/adapters/macos/appearance.ts";
+import {
+  answerAppearanceQuery,
+  watchScheme,
+} from "@/adapters/macos/appearance.ts";
 import { makeUiPorts } from "@/app/bridge.ts";
 import type { SessionsStore } from "@/app/SessionsStore.ts";
 import type { RunSource } from "@/ports/RunSource.ts";
@@ -11,6 +14,7 @@ import { createKeys } from "@/ui/lib/keys.ts";
 export const start = async (
   layer: Layer.Layer<SessionsStore | RunSource, unknown>,
 ) => {
+  answerAppearanceQuery();
   const ports = await makeUiPorts(layer);
   const { keys, emit } = createKeys();
   const scheme = await watchScheme();

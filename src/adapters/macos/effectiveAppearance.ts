@@ -1,7 +1,7 @@
 import { CString, dlopen, FFIType, type Pointer } from "bun:ffi";
 
 // Auto appearance no longer sets `AppleInterfaceStyle`, so ask AppKit itself.
-const read = () => {
+export const readScheme = (): "dark" | "light" => {
   dlopen("/System/Library/Frameworks/AppKit.framework/AppKit", {
     NSApplicationMain: { args: [], returns: FFIType.void },
   });
@@ -22,6 +22,3 @@ const read = () => {
   const text = String(new CString(send(name, "UTF8String") as Pointer));
   return text.includes("Dark") ? "dark" : "light";
 };
-
-// A fresh process sees the current appearance; a long-lived one may not.
-if (import.meta.main) console.log(read());
