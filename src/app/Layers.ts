@@ -7,15 +7,15 @@ import { ClaudeHome } from "@/adapters/claude/ClaudeHome.ts";
 import { RunSourceFs } from "@/adapters/claude/RunSourceFs.ts";
 import {
   processAlive,
-  SessionCatalogFs,
-} from "@/adapters/claude/SessionCatalogFs.ts";
+  SessionRepositoryFs,
+} from "@/adapters/claude/SessionRepositoryFs.ts";
 import { codexAssets } from "@/adapters/codex/assets.ts";
 import { CodexHome } from "@/adapters/codex/CodexHome.ts";
 import { RunSourceCodex } from "@/adapters/codex/runs.ts";
-import { SessionCatalogCodex } from "@/adapters/codex/sessions.ts";
+import { SessionRepositoryCodex } from "@/adapters/codex/sessions.ts";
 import { assetReaderMemory } from "@/adapters/memory/AssetReaderMemory.ts";
 import { RunSourceMemory } from "@/adapters/memory/RunSourceMemory.ts";
-import { SessionCatalogMemory } from "@/adapters/memory/SessionCatalogMemory.ts";
+import { SessionRepositoryMemory } from "@/adapters/memory/SessionRepositoryMemory.ts";
 import { ollamaAssets } from "@/adapters/ollama/assets.ts";
 import { OllamaHome } from "@/adapters/ollama/OllamaHome.ts";
 import {
@@ -34,7 +34,7 @@ const sessionPoll = Schedule.spaced("1 second");
 const claude = harness(
   "claude",
   Layer.mergeAll(
-    SessionCatalogFs(processAlive),
+    SessionRepositoryFs(processAlive),
     RunSourceFs(Schedule.spaced("500 millis")),
   ).pipe(Layer.provide(ClaudeHome.default)),
 );
@@ -42,7 +42,7 @@ const claude = harness(
 const codex = harness(
   "codex",
   Layer.mergeAll(
-    SessionCatalogCodex,
+    SessionRepositoryCodex,
     RunSourceCodex(Schedule.spaced("500 millis")),
   ).pipe(Layer.provide(CodexHome.default)),
 );
@@ -64,7 +64,7 @@ export const LiveLayer = SessionsStoreLive(sessionPoll).pipe(
 const demoClaude = harness(
   "claude",
   Layer.mergeAll(
-    SessionCatalogMemory(() => [demoSession]),
+    SessionRepositoryMemory(() => [demoSession]),
     RunSourceMemory({ [demoSession.id]: demoEvents }),
   ),
 );
@@ -72,7 +72,7 @@ const demoClaude = harness(
 const demoCodex = harness(
   "codex",
   Layer.mergeAll(
-    SessionCatalogMemory(() => [demoCodexSession]),
+    SessionRepositoryMemory(() => [demoCodexSession]),
     RunSourceMemory({ [demoCodexSession.id]: demoCodexEvents }),
   ),
 );

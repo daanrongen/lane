@@ -4,14 +4,17 @@ import { Effect, FileSystem, Layer } from "effect";
 import { jsonl, runFs } from "@/adapters/claude/fixtures.ts";
 import { CodexHome } from "@/adapters/codex/CodexHome.ts";
 import { meta } from "@/adapters/codex/fixtures.ts";
-import { parseMeta, SessionCatalogCodex } from "@/adapters/codex/sessions.ts";
+import {
+  parseMeta,
+  SessionRepositoryCodex,
+} from "@/adapters/codex/sessions.ts";
 import { SessionId } from "@/domain/ids.ts";
-import { SessionCatalog } from "@/ports/SessionCatalog.ts";
+import { SessionRepository } from "@/ports/SessionRepository.ts";
 
 const list = (home: string) =>
-  SessionCatalog.use((c) => c.list).pipe(
+  SessionRepository.use((c) => c.list).pipe(
     Effect.provide(
-      SessionCatalogCodex.pipe(Layer.provide(CodexHome.layer(home))),
+      SessionRepositoryCodex.pipe(Layer.provide(CodexHome.layer(home))),
     ),
   );
 
@@ -25,7 +28,7 @@ describe("parseMeta", () => {
   });
 });
 
-describe("SessionCatalogCodex", () => {
+describe("SessionRepositoryCodex", () => {
   test("every rollout is a session; age says if it is still live", () =>
     runFs(
       Effect.gen(function* () {

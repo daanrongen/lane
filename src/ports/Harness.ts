@@ -2,7 +2,7 @@ import { Context, Effect, Layer, type Scope, type Stream } from "effect";
 import type { RunEvent } from "@/domain/events.ts";
 import type { HarnessId, Session } from "@/domain/session.ts";
 import { RunSource } from "@/ports/RunSource.ts";
-import { SessionCatalog } from "@/ports/SessionCatalog.ts";
+import { SessionRepository } from "@/ports/SessionRepository.ts";
 import type { SourceError } from "@/ports/SourceError.ts";
 
 // One agent harness: which sessions it has, and what happened in each.
@@ -19,11 +19,11 @@ export class Harnesses extends Context.Service<Harnesses, readonly Harness[]>()(
 // A harness is whatever layer provides the two session ports for it.
 export const harness = <E, R>(
   id: HarnessId,
-  adapters: Layer.Layer<SessionCatalog | RunSource, E, R>,
+  adapters: Layer.Layer<SessionRepository | RunSource, E, R>,
 ) =>
   Effect.gen(function* () {
     const context = yield* Layer.build(adapters);
-    const catalog = Context.get(context, SessionCatalog);
+    const catalog = Context.get(context, SessionRepository);
     const runs = Context.get(context, RunSource);
     return {
       id,

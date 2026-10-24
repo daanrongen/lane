@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { Effect, Layer, type Scope, SubscriptionRef } from "effect";
 import { RunSourceMemory } from "@/adapters/memory/RunSourceMemory.ts";
-import { SessionCatalogMemory } from "@/adapters/memory/SessionCatalogMemory.ts";
+import { SessionRepositoryMemory } from "@/adapters/memory/SessionRepositoryMemory.ts";
 import { demoEvents, demoSession } from "@/app/demo.ts";
 import { openRun } from "@/app/openRun.ts";
 import { until } from "@/app/testing.ts";
@@ -15,7 +15,7 @@ const source = harnessesOf(
   harness(
     "claude",
     Layer.merge(
-      SessionCatalogMemory(() => [demoSession]),
+      SessionRepositoryMemory(() => [demoSession]),
       RunSourceMemory({ [id]: demoEvents }),
     ),
   ),

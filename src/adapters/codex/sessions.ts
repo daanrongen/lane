@@ -5,7 +5,7 @@ import { parseJson, rec, str } from "@/adapters/shared/json.ts";
 import { headLines } from "@/adapters/shared/ranges.ts";
 import { SessionId } from "@/domain/ids.ts";
 import type { Session, SessionStatus } from "@/domain/session.ts";
-import { SessionCatalog } from "@/ports/SessionCatalog.ts";
+import { SessionRepository } from "@/ports/SessionRepository.ts";
 import { SourceError } from "@/ports/SourceError.ts";
 
 // Codex keeps no process registry, so how recently a rollout was written says if it is live.
@@ -30,8 +30,8 @@ export const parseMeta = (
 };
 
 // Every rollout under `sessions/YYYY/MM/DD/` is a session; titles come from Codex's own index.
-export const SessionCatalogCodex = Layer.effect(
-  SessionCatalog,
+export const SessionRepositoryCodex = Layer.effect(
+  SessionRepository,
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem;
     const home = yield* CodexHome;

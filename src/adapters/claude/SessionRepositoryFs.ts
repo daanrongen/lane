@@ -4,7 +4,7 @@ import { parseJson, rec, str } from "@/adapters/shared/json.ts";
 import { headLines, tailLines } from "@/adapters/shared/ranges.ts";
 import { SessionId } from "@/domain/ids.ts";
 import type { Session } from "@/domain/session.ts";
-import { SessionCatalog } from "@/ports/SessionCatalog.ts";
+import { SessionRepository } from "@/ports/SessionRepository.ts";
 import { SourceError } from "@/ports/SourceError.ts";
 
 export const parseSession = (raw: unknown): Session | undefined => {
@@ -58,9 +58,9 @@ export const summarize = (
 
 // Every transcript is a session; the registry says which are still running.
 // Registry files outlive their process, so liveness is injected.
-export const SessionCatalogFs = (isAlive: (pid: number) => boolean) =>
+export const SessionRepositoryFs = (isAlive: (pid: number) => boolean) =>
   Layer.effect(
-    SessionCatalog,
+    SessionRepository,
     Effect.gen(function* () {
       const fs = yield* FileSystem.FileSystem;
       const home = yield* ClaudeHome;

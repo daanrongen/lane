@@ -1,13 +1,13 @@
 import { describe, expect, test } from "bun:test";
 import { Effect, Layer, Schedule, SubscriptionRef } from "effect";
 import { RunSourceMemory } from "@/adapters/memory/RunSourceMemory.ts";
-import { SessionCatalogMemory } from "@/adapters/memory/SessionCatalogMemory.ts";
+import { SessionRepositoryMemory } from "@/adapters/memory/SessionRepositoryMemory.ts";
 import { SessionsStore, SessionsStoreLive } from "@/app/SessionsStore.ts";
 import { until } from "@/app/testing.ts";
 import { SessionId } from "@/domain/ids.ts";
 import type { Session } from "@/domain/session.ts";
 import { harness, harnessesOf } from "@/ports/Harness.ts";
-import { SessionCatalog } from "@/ports/SessionCatalog.ts";
+import { SessionRepository } from "@/ports/SessionRepository.ts";
 import { SourceError } from "@/ports/SourceError.ts";
 
 const session = (id: string): Session => ({
@@ -22,7 +22,7 @@ const session = (id: string): Session => ({
 const poll = Schedule.spaced("10 millis");
 const run = <A, E>(
   self: Effect.Effect<A, E, SessionsStore>,
-  catalog: Layer.Layer<SessionCatalog>,
+  catalog: Layer.Layer<SessionRepository>,
 ) =>
   Effect.runPromise(
     self.pipe(
@@ -51,13 +51,13 @@ describe("SessionsStore", () => {
         const seen = yield* until(read, (s) => s.length === 2);
         expect(seen.map((s) => s.id)).toEqual([SessionId("a"), SessionId("b")]);
       }),
-      SessionCatalogMemory(() => current),
+      SessionRepositoryMemory(() => current),
     );
   });
 
   test("a failed poll keeps the last known sessions", () => {
     let calls = 0;
-    const flaky = Layer.succeed(SessionCatalog, {
+    const flaky = Layer.succeed(SessionRepository, {
       list: Effect.suspend(() =>
         ++calls === 1
           ? Effect.succeed([session("a")])
@@ -85,7 +85,7 @@ describe("SessionsStore across harnesses", () => {
       harness(
         s.harness,
         Layer.merge(
-          SessionCatalogMemory(() => [s]),
+          SessionRepositoryMemory(() => [s]),
           RunSourceMemory({}),
         ),
       );

@@ -4,11 +4,11 @@ import { ClaudeHome } from "@/adapters/claude/ClaudeHome.ts";
 import { runFs } from "@/adapters/claude/fixtures.ts";
 import {
   parseSession,
-  SessionCatalogFs,
+  SessionRepositoryFs,
   summarize,
-} from "@/adapters/claude/SessionCatalogFs.ts";
+} from "@/adapters/claude/SessionRepositoryFs.ts";
 import { SessionId } from "@/domain/ids.ts";
-import { SessionCatalog } from "@/ports/SessionCatalog.ts";
+import { SessionRepository } from "@/ports/SessionRepository.ts";
 
 const entry = (pid: number, extra = {}) =>
   JSON.stringify({
@@ -42,7 +42,7 @@ describe("parseSession", () => {
   });
 });
 
-describe("SessionCatalogFs", () => {
+describe("SessionRepositoryFs", () => {
   test("lists live sessions and skips dead or malformed entries", () =>
     runFs(
       Effect.gen(function* () {
@@ -54,10 +54,10 @@ describe("SessionCatalogFs", () => {
         yield* fs.writeFileString(`${home}/sessions/3.json`, "{nope");
         yield* fs.writeFileString(`${home}/sessions/1.abc.key`, "secret");
 
-        const catalog = SessionCatalogFs((pid) => pid === 1).pipe(
+        const catalog = SessionRepositoryFs((pid) => pid === 1).pipe(
           Layer.provide(ClaudeHome.layer(home)),
         );
-        const sessions = yield* SessionCatalog.use((c) => c.list).pipe(
+        const sessions = yield* SessionRepository.use((c) => c.list).pipe(
           Effect.provide(catalog),
         );
         expect(sessions.map((s) => s.id)).toEqual([SessionId("s1")]);
@@ -77,11 +77,11 @@ describe("summarize", () => {
   });
 });
 
-describe("SessionCatalogFs history", () => {
+describe("SessionRepositoryFs history", () => {
   const run = (home: string, alive: (pid: number) => boolean) =>
-    SessionCatalog.use((c) => c.list).pipe(
+    SessionRepository.use((c) => c.list).pipe(
       Effect.provide(
-        SessionCatalogFs(alive).pipe(Layer.provide(ClaudeHome.layer(home))),
+        SessionRepositoryFs(alive).pipe(Layer.provide(ClaudeHome.layer(home))),
       ),
     );
 
