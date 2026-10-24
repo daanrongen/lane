@@ -295,8 +295,11 @@ export const makeDecoder = (cfg: DecoderConfig): Decoder => {
       }
       if (block?.type === "tool_use") events.push(...toolUse(block, at));
     }
-    // A final answer: sub-agents are done, the root is idle until the next prompt.
-    if (id && msg.stop_reason === "end_turn" && !ended.has(id)) {
+    // A final answer or a handback: sub-agents are done, the root is idle until the next prompt.
+    const handback = arr(msg.content).some(
+      (b) => rec(b)?.name === "SubagentHandback",
+    );
+    if (id && (msg.stop_reason === "end_turn" || handback) && !ended.has(id)) {
       ended.add(id);
       events.push({ _tag: "AgentFinished", agentId, at });
     }
