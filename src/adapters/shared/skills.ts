@@ -27,5 +27,11 @@ export const readSkills = (
         ),
       { concurrency: 8 },
     );
-    return found.filter((a): a is Asset => a !== undefined);
+    return found
+      .filter((a): a is Asset => a !== undefined)
+      .sort((a, b) =>
+        (a as { name: string }).name.localeCompare(
+          (b as { name: string }).name,
+        ),
+      );
   }).pipe(Effect.orElseSucceed((): Asset[] => []));

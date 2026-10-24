@@ -3,7 +3,8 @@ import type { SessionId } from "@/domain/ids.ts";
 // Who runs the agents; the dashboard is agnostic to which.
 export type HarnessId = "claude" | "codex";
 
-export type SessionStatus = "busy" | "idle";
+// A past session has no running process; its transcript is all that remains.
+export type SessionStatus = "busy" | "idle" | "past";
 
 export interface Session {
   readonly harness: HarnessId;

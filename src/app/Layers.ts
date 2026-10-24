@@ -42,7 +42,7 @@ const claude = harness(
 const codex = harness(
   "codex",
   Layer.mergeAll(
-    SessionCatalogCodex("24 hours"),
+    SessionCatalogCodex,
     RunSourceCodex(Schedule.spaced("500 millis")),
   ).pipe(Layer.provide(CodexHome.default)),
 );

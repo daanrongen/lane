@@ -1,5 +1,6 @@
+import { Database } from "bun:sqlite";
 import { describe, expect, test } from "bun:test";
-import { type Duration, Effect, FileSystem, Layer } from "effect";
+import { Effect, FileSystem, Layer } from "effect";
 import { jsonl, runFs } from "@/adapters/claude/fixtures.ts";
 import { CodexHome } from "@/adapters/codex/CodexHome.ts";
 import { meta } from "@/adapters/codex/fixtures.ts";
@@ -7,12 +8,10 @@ import { parseMeta, SessionCatalogCodex } from "@/adapters/codex/sessions.ts";
 import { SessionId } from "@/domain/ids.ts";
 import { SessionCatalog } from "@/ports/SessionCatalog.ts";
 
-const today = () => new Date().toISOString().slice(0, 10).replaceAll("-", "/");
-
-const list = (home: string, recent: Duration.Input) =>
+const list = (home: string) =>
   SessionCatalog.use((c) => c.list).pipe(
     Effect.provide(
-      SessionCatalogCodex(recent).pipe(Layer.provide(CodexHome.layer(home))),
+      SessionCatalogCodex.pipe(Layer.provide(CodexHome.layer(home))),
     ),
   );
 
@@ -27,12 +26,12 @@ describe("parseMeta", () => {
 });
 
 describe("SessionCatalogCodex", () => {
-  test("lists recently written rollouts and skips stale ones", () =>
+  test("every rollout is a session; age says if it is still live", () =>
     runFs(
       Effect.gen(function* () {
         const fs = yield* FileSystem.FileSystem;
         const home = yield* fs.makeTempDirectoryScoped();
-        const dir = `${home}/sessions/${today()}`;
+        const dir = `${home}/sessions/2026/01/01`;
         yield* fs.makeDirectory(dir, { recursive: true });
         yield* fs.writeFileString(
           `${dir}/rollout-t-fresh.jsonl`,
@@ -45,11 +44,38 @@ describe("SessionCatalogCodex", () => {
         const old = new Date(Date.now() - 7_200_000);
         yield* fs.utimes(`${dir}/rollout-t-stale.jsonl`, old, old);
 
-        const sessions = yield* list(home, "1 hour");
-        expect(sessions.map((s) => [s.id, s.harness, s.cwd])).toEqual([
-          [SessionId("fresh"), "codex", "/work"],
-        ]);
-        expect(sessions[0]?.status).toBe("busy");
+        const sessions = yield* list(home);
+        const byId = Object.fromEntries(sessions.map((s) => [s.id, s]));
+        expect(byId.fresh).toMatchObject({
+          harness: "codex",
+          cwd: "/work",
+          status: "busy",
+        });
+        expect(byId.stale?.status).toBe("past");
+      }),
+    ));
+
+  test("titles come from Codex's own thread index", () =>
+    runFs(
+      Effect.gen(function* () {
+        const fs = yield* FileSystem.FileSystem;
+        const home = yield* fs.makeTempDirectoryScoped();
+        const dir = `${home}/sessions/2026/01/01`;
+        yield* fs.makeDirectory(dir, { recursive: true });
+        yield* fs.writeFileString(
+          `${dir}/rollout-t-a.jsonl`,
+          jsonl([meta(0, "a")]),
+        );
+        const db = new Database(`${home}/state_5.sqlite`);
+        db.run(
+          "create table threads (id text, title text, cwd text, model_provider text, updated_at integer)",
+        );
+        db.run(
+          "insert into threads values ('a', 'Fix the build', '/work', 'openai', 5)",
+        );
+        db.close();
+
+        expect((yield* list(home))[0]?.name).toBe("Fix the build");
       }),
     ));
 
@@ -58,7 +84,7 @@ describe("SessionCatalogCodex", () => {
       Effect.gen(function* () {
         const fs = yield* FileSystem.FileSystem;
         const home = yield* fs.makeTempDirectoryScoped();
-        expect(yield* list(home, "1 hour")).toEqual([]);
+        expect(yield* list(home)).toEqual([]);
       }),
     ));
 });

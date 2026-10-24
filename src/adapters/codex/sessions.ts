@@ -1,30 +1,21 @@
-import {
-  Clock,
-  Duration,
-  Effect,
-  FileSystem,
-  Layer,
-  Option,
-  Stream,
-} from "effect";
+import { Clock, Effect, FileSystem, Layer, Option } from "effect";
 import { CodexHome } from "@/adapters/codex/CodexHome.ts";
+import { codexState } from "@/adapters/codex/state.ts";
 import { parseJson, rec, str } from "@/adapters/shared/json.ts";
-import { concat } from "@/adapters/shared/tail.ts";
+import { headLines } from "@/adapters/shared/ranges.ts";
 import { SessionId } from "@/domain/ids.ts";
-import type { Session } from "@/domain/session.ts";
+import type { Session, SessionStatus } from "@/domain/session.ts";
 import { SessionCatalog } from "@/ports/SessionCatalog.ts";
 import { SourceError } from "@/ports/SourceError.ts";
 
-const text = new TextDecoder();
-const DAY = 86_400_000;
-// A session written this recently is still being worked on.
+// Codex keeps no process registry, so how recently a rollout was written says if it is live.
 const BUSY = 30_000;
+const IDLE = 600_000;
+// More than this many sessions would only slow the scan.
+const MAX_SESSIONS = 300;
 
-// `sessions/YYYY/MM/DD/rollout-<time>-<id>.jsonl`; the day in the path avoids stat-ing old files.
-const dayOf = (path: string) => {
-  const m = /(\d{4})\/(\d{2})\/(\d{2})\//.exec(path);
-  return m ? Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3])) : 0;
-};
+const statusOf = (age: number): SessionStatus =>
+  age < BUSY ? "busy" : age < IDLE ? "idle" : "past";
 
 export const parseMeta = (
   raw: unknown,
@@ -38,63 +29,66 @@ export const parseMeta = (
     : undefined;
 };
 
-// Codex keeps no process registry, so recently written rollouts count as live.
-export const SessionCatalogCodex = (recent: Duration.Input) =>
-  Layer.effect(
-    SessionCatalog,
-    Effect.gen(function* () {
-      const fs = yield* FileSystem.FileSystem;
-      const dir = `${yield* CodexHome}/sessions`;
-      const window = Duration.toMillis(Duration.fromInputUnsafe(recent));
+// Every rollout under `sessions/YYYY/MM/DD/` is a session; titles come from Codex's own index.
+export const SessionCatalogCodex = Layer.effect(
+  SessionCatalog,
+  Effect.gen(function* () {
+    const fs = yield* FileSystem.FileSystem;
+    const home = yield* CodexHome;
+    const dir = `${home}/sessions`;
+    const state = yield* codexState.pipe(
+      Effect.provideService(CodexHome, home),
+      Effect.provideService(FileSystem.FileSystem, fs),
+    );
 
-      const head = (file: string) =>
-        Stream.runCollect(fs.stream(file, { bytesToRead: 65_536 })).pipe(
-          Effect.map((chunks) =>
-            parseMeta(
-              parseJson(text.decode(concat(chunks)).split("\n")[0] ?? ""),
-            ),
-          ),
+    const describe = (
+      file: string,
+      now: number,
+      titles: ReadonlyMap<string, string>,
+    ): Effect.Effect<Session | undefined> =>
+      Effect.gen(function* () {
+        const info = yield* fs.stat(`${dir}/${file}`);
+        const mtime = Option.getOrElse(info.mtime, () => new Date(0)).getTime();
+        const meta = parseMeta(
+          parseJson((yield* headLines(fs, `${dir}/${file}`, 65_536))[0] ?? ""),
         );
+        return meta
+          ? {
+              ...meta,
+              harness: "codex" as const,
+              status: statusOf(now - mtime),
+              name: titles.get(meta.id),
+              updatedAt: mtime,
+            }
+          : undefined;
+      }).pipe(Effect.orElseSucceed(() => undefined));
 
-      const describe = (
-        file: string,
-        now: number,
-      ): Effect.Effect<Session | undefined> =>
-        Effect.gen(function* () {
-          const info = yield* fs.stat(`${dir}/${file}`);
-          const mtime = Option.getOrElse(
-            info.mtime,
-            () => new Date(0),
-          ).getTime();
-          if (now - mtime > window) return undefined;
-          const meta = yield* head(`${dir}/${file}`);
-          return meta
-            ? ({
-                ...meta,
-                harness: "codex",
-                status: now - mtime < BUSY ? "busy" : "idle",
-                updatedAt: mtime,
-              } satisfies Session)
-            : undefined;
-        }).pipe(Effect.orElseSucceed(() => undefined));
-
-      const list = Effect.gen(function* () {
-        const now = yield* Clock.currentTimeMillis;
-        const files = (yield* fs.readDirectory(dir, {
-          recursive: true,
-        })).filter(
-          (f) => f.endsWith(".jsonl") && dayOf(f) >= now - window - DAY,
-        );
-        const found = yield* Effect.forEach(files, (f) => describe(f, now));
-        return found.filter((s): s is Session => s !== undefined);
-      }).pipe(
-        // No sessions directory just means Codex never ran.
-        Effect.orElseSucceed(() => [] as readonly Session[]),
-        Effect.mapError(
-          (cause) =>
-            new SourceError({ message: "cannot list codex sessions", cause }),
-        ),
+    const list = Effect.gen(function* () {
+      const now = yield* Clock.currentTimeMillis;
+      const titles = new Map(
+        (yield* state.threads).map((t) => [t.id, t.title]),
       );
-      return { list };
-    }),
-  );
+      // Paths start with the date, so the newest sort last.
+      const files = (yield* fs.readDirectory(dir, { recursive: true }))
+        .filter((f) => f.endsWith(".jsonl"))
+        .sort()
+        .slice(-MAX_SESSIONS);
+      const found = yield* Effect.forEach(
+        files,
+        (f) => describe(f, now, titles),
+        {
+          concurrency: 8,
+        },
+      );
+      return found.filter((s): s is Session => s !== undefined);
+    }).pipe(
+      // No sessions directory just means Codex never ran.
+      Effect.orElseSucceed((): readonly Session[] => []),
+      Effect.mapError(
+        (cause) =>
+          new SourceError({ message: "cannot list codex sessions", cause }),
+      ),
+    );
+    return { list };
+  }),
+);

@@ -1,6 +1,7 @@
 import { useWindowSize } from "@gpuix/react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { Asset } from "@/domain/assets.ts";
+import { groupByProject } from "@/domain/projects.ts";
 import type { Session } from "@/domain/session.ts";
 import { Box } from "@/ui/atoms/Box.tsx";
 import { Text } from "@/ui/atoms/Text.tsx";
@@ -15,6 +16,7 @@ import type {
   UiPorts,
 } from "@/ui/lib/ports.ts";
 import { responsive } from "@/ui/lib/responsive.ts";
+import { keyOf, type Move, move } from "@/ui/lib/sessionsNav.ts";
 import { KeyHints } from "@/ui/organisms/KeyHints.tsx";
 import { SessionList } from "@/ui/organisms/SessionList.tsx";
 import { SessionSwitcher } from "@/ui/organisms/SessionSwitcher.tsx";
@@ -87,47 +89,67 @@ export const DashboardPage = ({
 }) => {
   const size = useWindowSize();
   const sessions = useStore(ports.sessions);
-  const [index, setIndex] = useState(0);
+  const [pickedKey, setPickedKey] = useState<string>();
   const [zoom, setZoom] = useState(1);
-  const last = Math.max(0, sessions.length - 1);
-  const current = Math.min(index, last);
-  const selected = sessions[current];
+  const groups = useMemo(() => groupByProject(sessions), [sessions]);
+  const ordered = useMemo(() => groups.flatMap((g) => g.sessions), [groups]);
+  // Selection is by identity, so a session moving up the list doesn't change it.
+  const selected = ordered.find((s) => keyOf(s) === pickedKey) ?? ordered[0];
+  const position = selected ? ordered.indexOf(selected) + 1 : 0;
   const opened = useOpened(ports, selected);
   const assets = useStore(useAssets(ports, selected?.cwd)?.assets ?? none);
-  const many = sessions.length > 1;
+  const many = ordered.length > 1;
+  const metrics = responsive(size, 0, zoom, many);
+
+  const nav = useRef({ groups, selected });
+  nav.current = { groups, selected };
+  const go = (by: Move) => {
+    const next = move(nav.current.groups, nav.current.selected, by);
+    if (next) setPickedKey(keyOf(next));
+  };
 
   useEffect(
     () =>
       keys.subscribe((key) => {
-        if (key === "j" || key === "down")
-          setIndex((i) => Math.min(i + 1, last));
-        if (key === "k" || key === "up") setIndex((i) => Math.max(i - 1, 0));
+        if (key === "j" || key === "down") go("next");
+        if (key === "k" || key === "up") go("previous");
+        if (key === "]") go("nextProject");
+        if (key === "[") go("previousProject");
         if (key === "+" || key === "=")
           setZoom((z) => clampZoom(z + ZOOM.step));
         if (key === "-") setZoom((z) => clampZoom(z - ZOOM.step));
         if (key === "0") setZoom(1);
       }),
-    [keys, last],
+    // `go` reads the latest selection from a ref.
+    [keys],
   );
 
   return (
-    <MetricsContext.Provider value={responsive(size, 0, zoom, many)}>
+    <MetricsContext.Provider value={metrics}>
       <DashboardTemplate
         sidebar={
           many ? (
-            <SessionList sessions={sessions} selected={current} />
+            <SessionList
+              groups={groups}
+              selected={selected}
+              height={(size.height - 3 * metrics.pad) * 0.92}
+            />
           ) : undefined
         }
         switcher={
           many ? (
-            <SessionSwitcher sessions={sessions} selected={current} />
+            <SessionSwitcher
+              current={selected}
+              position={position}
+              total={ordered.length}
+            />
           ) : undefined
         }
         footer={<KeyHints />}
       >
         {selected && opened ? (
           <RunPage
-            key={selected.id}
+            key={keyOf(selected)}
             opened={opened}
             title={sessionTitle(selected)}
             cwd={selected.cwd}

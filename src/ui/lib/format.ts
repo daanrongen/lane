@@ -23,6 +23,9 @@ export const plural = (n: number, noun: string) =>
 export const sessionTitle = (s: { name?: string; cwd: string }) =>
   s.name ?? s.cwd.split("/").filter(Boolean).at(-1) ?? s.cwd;
 
+// Under a project heading the directory is already known.
+export const untitled = (s: { name?: string }) => s.name ?? "untitled";
+
 // Sub-second precision for single spans, where whole seconds hide the detail.
 export const exact = (seconds: number) =>
   seconds < 1
@@ -43,3 +46,11 @@ export const bytes = (n: number) =>
 
 export const clip = (s: string, max: number) =>
   s.length > max ? `${s.slice(0, max - 1)}…` : s;
+
+export const ago = (ms: number) => {
+  const m = Math.floor(ms / 60_000);
+  if (m < 1) return "now";
+  if (m < 60) return `${m}m`;
+  const h = Math.floor(m / 60);
+  return h < 24 ? `${h}h` : `${Math.floor(h / 24)}d`;
+};

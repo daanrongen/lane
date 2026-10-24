@@ -6,8 +6,8 @@ export const KeyHints = () => {
   return (
     <Text size="small" tone="dim">
       {r.compact
-        ? "j/k session  h/l agent  q quit"
-        : "j/k session   h/l agent   +/- zoom   0 reset   q quit"}
+        ? "j/k session  [/] project  q quit"
+        : "j/k session   [/] project   h/l agent   +/- zoom   q quit"}
     </Text>
   );
 };

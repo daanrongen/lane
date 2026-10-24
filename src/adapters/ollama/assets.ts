@@ -40,7 +40,14 @@ export const ollamaAssets = Effect.gen(function* () {
             )
           : Effect.succeed(undefined);
       });
-      return found.filter((a): a is Asset => a !== undefined);
+      // Directory order is arbitrary; sorted by name it is stable.
+      return found
+        .filter((a): a is Asset => a !== undefined)
+        .sort((a, b) =>
+          (a as { name: string }).name.localeCompare(
+            (b as { name: string }).name,
+          ),
+        );
     }).pipe(Effect.orElseSucceed((): Asset[] => []));
   const reader: AssetReader = { source: "ollama", read };
   return reader;
