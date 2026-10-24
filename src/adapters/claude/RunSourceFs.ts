@@ -7,13 +7,10 @@ import {
   Stream,
 } from "effect";
 import { ClaudeHome } from "@/adapters/claude/ClaudeHome.ts";
-import {
-  type Decoder,
-  makeDecoder,
-  spawnRegistry,
-} from "@/adapters/claude/decode.ts";
-import { parseJson, rec, str } from "@/adapters/claude/json.ts";
-import { concat, tail } from "@/adapters/claude/tail.ts";
+import { makeDecoder, spawnRegistry } from "@/adapters/claude/decode.ts";
+import type { Decoder } from "@/adapters/shared/decoder.ts";
+import { parseJson, rec, str } from "@/adapters/shared/json.ts";
+import { concat, tail } from "@/adapters/shared/tail.ts";
 import type { RunEvent } from "@/domain/events.ts";
 import { AgentId, type SessionId } from "@/domain/ids.ts";
 import { RunSource } from "@/ports/RunSource.ts";

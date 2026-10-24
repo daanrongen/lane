@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { demoEvents } from "@/app/demo.ts";
+import { demoCodexEvents, demoEvents } from "@/app/demo.ts";
 import { contextGauge } from "@/domain/context.ts";
 import { foldAll } from "@/domain/fold.ts";
 import { SessionId } from "@/domain/ids.ts";
@@ -43,5 +43,16 @@ describe("demo run", () => {
     expect(tl.lanes.every((l) => l.model)).toBe(true);
     const last = tl.lanes[0]?.lastTurn?.usage;
     expect(last && contextGauge(last, 200_000).ratio).toBeGreaterThan(0);
+  });
+});
+
+describe("demo codex run", () => {
+  const tl = timeline(foldAll(emptyRun(SessionId("c"), 0), demoCodexEvents), 0);
+
+  test("is a single finished agent with a failed call and a known window", () => {
+    expect(tl.lanes).toHaveLength(1);
+    expect(tl.lanes[0]?.finished).toBe(true);
+    expect(tl.lanes[0]?.bars.some(isFailed)).toBe(true);
+    expect(tl.lanes[0]?.lastTurn?.window).toBe(258_400);
   });
 });

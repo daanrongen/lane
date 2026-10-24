@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { makeAxis } from "@/domain/axis.ts";
-import { contextMap, contextUsed, windowFor } from "@/domain/context.ts";
+import { contextMap, contextUsed, laneWindow } from "@/domain/context.ts";
 import { mcpServers } from "@/domain/mcp.ts";
 import { timeline } from "@/domain/timeline.ts";
 import { Box, Row } from "@/ui/atoms/Box.tsx";
@@ -23,6 +23,7 @@ export const RunPage = ({
   opened,
   title,
   cwd,
+  harness,
   size,
   zoom,
   keys,
@@ -31,6 +32,7 @@ export const RunPage = ({
   opened: OpenedRun;
   title: string;
   cwd: string;
+  harness: string;
   size: Size;
   zoom: number;
   keys: Keys;
@@ -73,7 +75,7 @@ export const RunPage = ({
       run.context.filter((e) => e.agentId === lane?.agent.id),
       run.setups.findLast((s) => s.agentId === lane?.agent.id),
       used,
-      windowFor(lane?.model, used),
+      lane ? laneWindow(lane) : 0,
     );
   }, [run.context, run.setups, lane]);
   const servers = useMemo(
@@ -83,7 +85,13 @@ export const RunPage = ({
 
   return (
     <MetricsContext.Provider value={r}>
-      <Header title={title} subtitle={cwd} status={status} timeline={tl} />
+      <Header
+        title={title}
+        subtitle={cwd}
+        harness={harness}
+        status={status}
+        timeline={tl}
+      />
       <Box
         style={{
           flexDirection: "column",

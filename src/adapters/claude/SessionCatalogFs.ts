@@ -1,6 +1,6 @@
 import { Effect, FileSystem, Layer } from "effect";
 import { ClaudeHome } from "@/adapters/claude/ClaudeHome.ts";
-import { parseJson, rec, str } from "@/adapters/claude/json.ts";
+import { parseJson, rec, str } from "@/adapters/shared/json.ts";
 import { SessionId } from "@/domain/ids.ts";
 import type { Session } from "@/domain/session.ts";
 import { SessionCatalog } from "@/ports/SessionCatalog.ts";
@@ -50,7 +50,7 @@ export const SessionCatalogFs = (isAlive: (pid: number) => boolean) =>
           ),
         );
         return sessions.filter(
-          (s): s is Session => s !== undefined && isAlive(s.pid),
+          (s): s is Session => s?.pid !== undefined && isAlive(s.pid),
         );
       }).pipe(
         Effect.mapError(

@@ -1,4 +1,4 @@
-import { contextUsed, windowFor } from "@/domain/context.ts";
+import { contextUsed, laneWindow } from "@/domain/context.ts";
 import type { Lane } from "@/domain/timeline.ts";
 import { Column } from "@/ui/atoms/Box.tsx";
 import { Dot } from "@/ui/atoms/Dot.tsx";
@@ -21,7 +21,7 @@ export const LaneLabel = ({ lane, color }: { lane: Lane; color: string }) => {
 
   return (
     <Hover
-      card={() => laneCard(lane, used, windowFor(lane.model, used))}
+      card={() => laneCard(lane, used, laneWindow(lane))}
       accent={color}
       box={{ height: r.rowHeight }}
       style={{

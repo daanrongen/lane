@@ -15,11 +15,13 @@ const STATUS: Record<RunStatus, string> = {
 export const Header = ({
   title,
   subtitle,
+  harness,
   status,
   timeline,
 }: {
   title: string;
   subtitle?: string;
+  harness: string;
   status: RunStatus;
   timeline: Timeline;
 }) => {
@@ -36,6 +38,7 @@ export const Header = ({
       </Row>
       <Summary
         items={[
+          harness,
           STATUS[status],
           plural(timeline.lanes.length, "agent"),
           duration(timeline.duration),

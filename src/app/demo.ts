@@ -12,6 +12,14 @@ export const demoSession: Session = {
   updatedAt: 0,
 };
 
+export const demoCodexSession: Session = {
+  harness: "codex",
+  id: SessionId("demo-codex"),
+  cwd: "~/Developer/portfolio",
+  status: "idle",
+  updatedAt: -1,
+};
+
 const main = AgentId("orchestrator");
 const checker = AgentId("checker");
 const researcher = AgentId("researcher");
@@ -211,4 +219,43 @@ export const demoEvents: readonly RunEvent[] = [
   ctx(analyst, "File", "src/checkout/", 3_600),
   ctx(writer, "Message", "Messages", 3_000),
   ctx(writer, "Tool", "Write", 5_500),
+];
+
+const codex = AgentId("codex");
+
+// A single-agent Codex run: no hand-offs, a failed test run, a patch.
+export const demoCodexEvents: readonly RunEvent[] = [
+  { _tag: "RunStarted", startedAt: Date.parse("2026-01-01T09:30:00Z") },
+  {
+    _tag: "AgentSpawned",
+    agent: { id: codex, parentId: null, name: "codex" },
+    at: 0,
+  },
+  ...thinking(codex, 0, 2),
+  ...tool(codex, "shell", 2, 3.5),
+  ...thinking(codex, 3.5, 5),
+  ...tool(codex, "apply_patch", 5, 6),
+  ...tool(codex, "shell", 6, 11, true),
+  ...thinking(codex, 11, 13),
+  ...tool(codex, "apply_patch", 13, 14),
+  ...tool(codex, "shell", 14, 18),
+  { _tag: "AgentFinished", agentId: codex, at: 18 },
+  {
+    _tag: "TurnReported",
+    turn: {
+      agentId: codex,
+      at: 18,
+      model: "gpt-5.5",
+      window: 258_400,
+      usage: { input: 14_000, output: 2_100, cacheRead: 61_000, cacheWrite: 0 },
+    },
+  },
+  {
+    _tag: "SetupReported",
+    setup: { agentId: codex, at: 0, system: 5_800, tools: [] },
+  },
+  ctx(codex, "Message", "Messages", 6_400),
+  ctx(codex, "Tool", "shell", 18_200),
+  ctx(codex, "Tool", "apply_patch", 7_300),
+  ctx(codex, "Message", "Thinking", 9_100),
 ];

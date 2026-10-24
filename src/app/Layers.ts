@@ -6,9 +6,17 @@ import {
   processAlive,
   SessionCatalogFs,
 } from "@/adapters/claude/SessionCatalogFs.ts";
+import { CodexHome } from "@/adapters/codex/CodexHome.ts";
+import { RunSourceCodex } from "@/adapters/codex/runs.ts";
+import { SessionCatalogCodex } from "@/adapters/codex/sessions.ts";
 import { RunSourceMemory } from "@/adapters/memory/RunSourceMemory.ts";
 import { SessionCatalogMemory } from "@/adapters/memory/SessionCatalogMemory.ts";
-import { demoEvents, demoSession } from "@/app/demo.ts";
+import {
+  demoCodexEvents,
+  demoCodexSession,
+  demoEvents,
+  demoSession,
+} from "@/app/demo.ts";
 import { SessionsStoreLive } from "@/app/SessionsStore.ts";
 import { harness, harnessesOf } from "@/ports/Harness.ts";
 
@@ -22,13 +30,21 @@ const claude = harness(
   ).pipe(Layer.provide(ClaudeHome.default)),
 );
 
+const codex = harness(
+  "codex",
+  Layer.mergeAll(
+    SessionCatalogCodex("24 hours"),
+    RunSourceCodex(Schedule.spaced("500 millis")),
+  ).pipe(Layer.provide(CodexHome.default)),
+);
+
 // The agent harnesses on this machine, followed live.
 export const LiveLayer = SessionsStoreLive(sessionPoll).pipe(
-  Layer.provideMerge(harnessesOf(claude)),
+  Layer.provideMerge(harnessesOf(claude, codex)),
   Layer.provide(BunFileSystem.layer),
 );
 
-const demo = harness(
+const demoClaude = harness(
   "claude",
   Layer.mergeAll(
     SessionCatalogMemory(() => [demoSession]),
@@ -36,7 +52,15 @@ const demo = harness(
   ),
 );
 
-// A scripted run, so the UI works without any harness data.
+const demoCodex = harness(
+  "codex",
+  Layer.mergeAll(
+    SessionCatalogMemory(() => [demoCodexSession]),
+    RunSourceMemory({ [demoCodexSession.id]: demoCodexEvents }),
+  ),
+);
+
+// Scripted runs, so the UI works without any harness data.
 export const DemoLayer = SessionsStoreLive(sessionPoll).pipe(
-  Layer.provideMerge(harnessesOf(demo)),
+  Layer.provideMerge(harnessesOf(demoClaude, demoCodex)),
 );

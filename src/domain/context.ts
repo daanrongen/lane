@@ -22,6 +22,8 @@ export const contextGauge = (
   };
 };
 
+import type { Lane } from "@/domain/timeline.ts";
+
 export type CellKind = Entry["kind"] | "System" | "Tools" | "Free";
 
 export interface Part {
@@ -159,4 +161,10 @@ export const contextMap = (
       },
     ],
   };
+};
+
+// What the harness reported, else a guess from the model.
+export const laneWindow = (lane: Lane) => {
+  const used = lane.lastTurn ? contextUsed(lane.lastTurn.usage) : 0;
+  return lane.lastTurn?.window ?? windowFor(lane.model, used);
 };

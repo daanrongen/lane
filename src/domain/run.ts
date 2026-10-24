@@ -68,6 +68,8 @@ export interface Turn {
   readonly at: number;
   readonly model?: string;
   readonly usage: Usage;
+  // The context window, when the harness reports it.
+  readonly window?: number;
 }
 
 // Something that entered an agent's context; tokens are estimated from its size.

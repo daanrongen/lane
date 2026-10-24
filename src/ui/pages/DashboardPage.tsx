@@ -96,6 +96,7 @@ export const DashboardPage = ({
             opened={opened}
             title={sessionTitle(selected)}
             cwd={selected.cwd}
+            harness={selected.harness}
             size={size}
             zoom={zoom}
             keys={keys}

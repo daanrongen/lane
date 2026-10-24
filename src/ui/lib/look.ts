@@ -1,5 +1,6 @@
 import type { StyleDesc } from "@gpuix/react";
 import type { CellKind } from "@/domain/context.ts";
+import type { HarnessId } from "@/domain/session.ts";
 import type { Bar } from "@/domain/timeline.ts";
 import { alpha, type Theme } from "@/ui/lib/theme.ts";
 
@@ -63,3 +64,7 @@ export const cellLook = (kind: CellKind, theme: Theme) => {
         };
   return { color, style };
 };
+
+// Each harness gets one hue, so sessions read apart at a glance.
+export const harnessColor = (harness: HarnessId, theme: Theme) =>
+  ({ claude: theme.agents[2], codex: theme.agents[3] })[harness] ?? theme.dim;

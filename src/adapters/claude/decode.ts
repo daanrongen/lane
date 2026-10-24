@@ -1,4 +1,11 @@
-import { arr, type Json, num, rec, str } from "@/adapters/claude/json.ts";
+import type { Decoder } from "@/adapters/shared/decoder.ts";
+import { arr, type Json, num, rec, str } from "@/adapters/shared/json.ts";
+import {
+  IMAGE_TOKENS,
+  imagesIn,
+  sizeOf,
+  tokensOf,
+} from "@/adapters/shared/sizing.ts";
 import type { RunEvent } from "@/domain/events.ts";
 import { AgentId, SpanId } from "@/domain/ids.ts";
 import { mcpName } from "@/domain/mcp.ts";
@@ -19,13 +26,6 @@ export interface DecoderConfig {
   readonly spawns: (toolUseId: string) => Spawn | undefined;
 }
 
-export interface Decoder {
-  push(line: unknown): RunEvent[];
-  // Resolves spawns whose meta arrived since the last line.
-  settle(): RunEvent[];
-  end(): RunEvent[];
-}
-
 const SPAWN_TOOLS = new Set(["Agent", "Task"]);
 
 const labelOf = (name: string, input: Json | undefined) => {
@@ -37,28 +37,6 @@ const labelOf = (name: string, input: Json | undefined) => {
     name;
   return raw.split("\n")[0]?.slice(0, 80) || name;
 };
-
-// Roughly four characters per token.
-const tokensOf = (chars: number) => Math.ceil(chars / 4);
-
-const sizeOf = (v: unknown): number =>
-  typeof v === "string"
-    ? v.length
-    : Array.isArray(v)
-      ? v.reduce(
-          (n: number, b) =>
-            n + (typeof b === "string" ? b.length : sizeOf(rec(b)?.text ?? 0)),
-          0,
-        )
-      : typeof v === "object" && v !== null
-        ? JSON.stringify(v).length
-        : 0;
-
-// A screenshot costs about this many tokens, whatever its bytes.
-const IMAGE_TOKENS = 3_000;
-
-const imagesIn = (v: unknown) =>
-  arr(v).filter((b) => rec(b)?.type === "image").length;
 
 // Attachments that are logs of the setup, not content the model reads.
 const NOT_CONTEXT = new Set(["prompt_snapshot", "deferred_tools_record"]);

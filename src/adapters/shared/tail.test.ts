@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { Effect, FileSystem, Schedule, Stream } from "effect";
 import { runFs } from "@/adapters/claude/fixtures.ts";
-import { tail } from "@/adapters/claude/tail.ts";
+import { tail } from "@/adapters/shared/tail.ts";
 
 const fast = Schedule.spaced("10 millis");
 
