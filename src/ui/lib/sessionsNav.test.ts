@@ -1,8 +1,13 @@
 import { describe, expect, test } from "bun:test";
 import { SessionId } from "@/domain/ids.ts";
-import { groupByProject } from "@/domain/projects.ts";
 import type { Session } from "@/domain/session.ts";
-import { move, navItems, visible } from "@/ui/lib/sessionsNav.ts";
+import {
+  dirName,
+  groupByDirectory,
+  move,
+  navItems,
+  visible,
+} from "@/ui/lib/sessionsNav.ts";
 
 const s = (id: string, cwd: string, updatedAt: number): Session => ({
   harness: "claude",
@@ -12,7 +17,7 @@ const s = (id: string, cwd: string, updatedAt: number): Session => ({
   updatedAt,
 });
 
-const groups = groupByProject([
+const groups = groupByDirectory([
   s("a1", "/a", 9),
   s("a2", "/a", 8),
   s("b1", "/b", 5),
@@ -27,9 +32,9 @@ describe("move", () => {
     expect(id(move(groups, groups[0]?.sessions[0], "previous"))).toBe("a1");
   });
 
-  test("project jumps land on the first session of the neighbour", () => {
-    expect(id(move(groups, groups[0]?.sessions[1], "nextProject"))).toBe("b1");
-    expect(id(move(groups, groups[1]?.sessions[0], "previousProject"))).toBe(
+  test("group jumps land on the first session of the neighbour", () => {
+    expect(id(move(groups, groups[0]?.sessions[1], "nextGroup"))).toBe("b1");
+    expect(id(move(groups, groups[1]?.sessions[0], "previousGroup"))).toBe(
       "a1",
     );
   });
@@ -38,12 +43,12 @@ describe("move", () => {
 describe("navItems and visible", () => {
   test("projects head their sessions", () => {
     expect(navItems(groups).map((i) => i.kind)).toEqual([
-      "project",
+      "group",
       "session",
       "session",
-      "project",
+      "group",
       "session",
-      "project",
+      "group",
       "session",
     ]);
   });
@@ -53,5 +58,26 @@ describe("navItems and visible", () => {
     expect(visible(items, 5, 3, () => 1)).toEqual([4, 5, 6]);
     expect(visible(items, 0, 3, () => 1)).toEqual([0, 1, 2]);
     expect(visible(items, 9, 4, () => 1)).toEqual([6, 7, 8, 9]);
+  });
+});
+
+describe("groupByDirectory", () => {
+  test("a group per directory across harnesses, newest first", () => {
+    const mixed = groupByDirectory([
+      s("a", "/x/one", 1),
+      s("b", "/x/two", 9),
+      { ...s("c", "/x/one", 5), harness: "codex" },
+    ]);
+    expect(
+      mixed.map((g) => [g.cwd, g.sessions.map((x) => String(x.id))]),
+    ).toEqual([
+      ["/x/two", ["b"]],
+      ["/x/one", ["c", "a"]],
+    ]);
+  });
+
+  test("a directory is named by its last two segments", () => {
+    expect(dirName("/Users/me/Developer/gpuix")).toBe("Developer/gpuix");
+    expect(dirName("/")).toBe("/");
   });
 });

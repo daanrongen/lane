@@ -1,10 +1,9 @@
-import type { Project } from "@/domain/projects.ts";
-import { projectName } from "@/domain/projects.ts";
 import { Row } from "@/ui/atoms/Box.tsx";
 import { Text } from "@/ui/atoms/Text.tsx";
 import { useMetrics } from "@/ui/lib/context.ts";
+import { dirName, type Group } from "@/ui/lib/sessionsNav.ts";
 
-export const ProjectHeading = ({ project }: { project: Project }) => {
+export const GroupHeading = ({ group }: { group: Group }) => {
   const r = useMetrics();
   return (
     <Row
@@ -14,9 +13,9 @@ export const ProjectHeading = ({ project }: { project: Project }) => {
         paddingTop: Math.round(r.pad / 2),
       }}
     >
-      <Text size="small">{projectName(project.cwd)}</Text>
+      <Text size="small">{dirName(group.cwd)}</Text>
       <Text size="small" tone="dim">
-        {String(project.sessions.length)}
+        {String(group.sessions.length)}
       </Text>
     </Row>
   );

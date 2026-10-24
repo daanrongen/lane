@@ -1,9 +1,9 @@
-import { projectName } from "@/domain/projects.ts";
 import type { Session } from "@/domain/session.ts";
 import { Row } from "@/ui/atoms/Box.tsx";
 import { Dot } from "@/ui/atoms/Dot.tsx";
 import { Text } from "@/ui/atoms/Text.tsx";
 import { useMetrics, useTheme } from "@/ui/lib/context.ts";
+import { dirName } from "@/ui/lib/sessionsNav.ts";
 
 // One line for compact panes; `j`/`k` still switch.
 export const SessionSwitcher = ({
@@ -22,7 +22,7 @@ export const SessionSwitcher = ({
     <Row gap={r.dot}>
       <Dot color={current.status === "busy" ? theme.running : theme.dim} />
       <Text size="small" tone="dim">
-        {`${position}/${total}  ${projectName(current.cwd)}`}
+        {`${position}/${total}  ${dirName(current.cwd)}`}
       </Text>
     </Row>
   );

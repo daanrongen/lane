@@ -1,7 +1,6 @@
 import { useWindowSize } from "@gpuix/react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { Asset } from "@/domain/assets.ts";
-import { groupByProject } from "@/domain/projects.ts";
 import type { Session } from "@/domain/session.ts";
 import { Box } from "@/ui/atoms/Box.tsx";
 import { Text } from "@/ui/atoms/Text.tsx";
@@ -16,7 +15,12 @@ import type {
   UiPorts,
 } from "@/ui/lib/ports.ts";
 import { responsive } from "@/ui/lib/responsive.ts";
-import { keyOf, type Move, move } from "@/ui/lib/sessionsNav.ts";
+import {
+  groupByDirectory,
+  keyOf,
+  type Move,
+  move,
+} from "@/ui/lib/sessionsNav.ts";
 import { KeyHints } from "@/ui/organisms/KeyHints.tsx";
 import { SessionList } from "@/ui/organisms/SessionList.tsx";
 import { SessionSwitcher } from "@/ui/organisms/SessionSwitcher.tsx";
@@ -91,7 +95,7 @@ export const DashboardPage = ({
   const sessions = useStore(ports.sessions);
   const [pickedKey, setPickedKey] = useState<string>();
   const [zoom, setZoom] = useState(1);
-  const groups = useMemo(() => groupByProject(sessions), [sessions]);
+  const groups = useMemo(() => groupByDirectory(sessions), [sessions]);
   const ordered = useMemo(() => groups.flatMap((g) => g.sessions), [groups]);
   // Selection is by identity, so a session moving up the list doesn't change it.
   const selected = ordered.find((s) => keyOf(s) === pickedKey) ?? ordered[0];
@@ -113,8 +117,8 @@ export const DashboardPage = ({
       keys.subscribe((key) => {
         if (key === "j" || key === "down") go("next");
         if (key === "k" || key === "up") go("previous");
-        if (key === "]") go("nextProject");
-        if (key === "[") go("previousProject");
+        if (key === "]") go("nextGroup");
+        if (key === "[") go("previousGroup");
         if (key === "+" || key === "=")
           setZoom((z) => clampZoom(z + ZOOM.step));
         if (key === "-") setZoom((z) => clampZoom(z - ZOOM.step));

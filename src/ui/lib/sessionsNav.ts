@@ -1,26 +1,48 @@
-import type { Project } from "@/domain/projects.ts";
 import type { Session } from "@/domain/session.ts";
+
+// Sessions that share a working directory, which Claude calls a project.
+export interface Group {
+  readonly cwd: string;
+  readonly sessions: readonly Session[];
+}
+
+// The last two path segments name the directory.
+export const dirName = (cwd: string) =>
+  cwd.split("/").filter(Boolean).slice(-2).join("/") || cwd;
+
+// Newest group first, and newest session first within it.
+export const groupByDirectory = (sessions: readonly Session[]): Group[] => {
+  const byCwd = new Map<string, Session[]>();
+  for (const s of sessions) byCwd.set(s.cwd, [...(byCwd.get(s.cwd) ?? []), s]);
+  return [...byCwd]
+    .map(([cwd, list]) => ({
+      cwd,
+      sessions: list.sort((a, b) => b.updatedAt - a.updatedAt),
+    }))
+    .sort(
+      (a, b) =>
+        (b.sessions[0]?.updatedAt ?? 0) - (a.sessions[0]?.updatedAt ?? 0),
+    );
+};
 
 export const keyOf = (s: Session) => `${s.harness}:${s.id}`;
 
 export type NavItem =
-  | { readonly kind: "project"; readonly project: Project }
+  | { readonly kind: "group"; readonly group: Group }
   | { readonly kind: "session"; readonly session: Session };
 
-// Projects with their sessions underneath, as one flat list.
-export const navItems = (groups: readonly Project[]): NavItem[] =>
-  groups.flatMap((project) => [
-    { kind: "project", project } as const,
-    ...project.sessions.map(
-      (session) => ({ kind: "session", session }) as const,
-    ),
+// Groups with their sessions underneath, as one flat list.
+export const navItems = (groups: readonly Group[]): NavItem[] =>
+  groups.flatMap((group) => [
+    { kind: "group", group } as const,
+    ...group.sessions.map((session) => ({ kind: "session", session }) as const),
   ]);
 
-export type Move = "next" | "previous" | "nextProject" | "previousProject";
+export type Move = "next" | "previous" | "nextGroup" | "previousGroup";
 
 // Which session a key lands on, given where we are.
 export const move = (
-  groups: readonly Project[],
+  groups: readonly Group[],
   current: Session | undefined,
   by: Move,
 ): Session | undefined => {
@@ -35,7 +57,7 @@ export const move = (
     g.sessions.some((s) => current && keyOf(s) === keyOf(current)),
   );
   const target =
-    by === "nextProject"
+    by === "nextGroup"
       ? Math.min(p + 1, groups.length - 1)
       : Math.max(p - 1, 0);
   return groups[Math.max(0, target)]?.sessions[0];
