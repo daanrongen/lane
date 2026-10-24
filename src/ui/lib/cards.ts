@@ -1,7 +1,8 @@
 import type { Cell, CellKind, ContextMap } from "@/domain/context.ts";
 import type { AgentId } from "@/domain/ids.ts";
 import type { McpServer } from "@/domain/mcp.ts";
-import type { Span } from "@/domain/run.ts";
+import type { HostSummary } from "@/domain/network.ts";
+import type { Request, Span } from "@/domain/run.ts";
 import type { Lane } from "@/domain/timeline.ts";
 import { duration, exact, percent, plural, tokens } from "@/ui/lib/format.ts";
 
@@ -136,3 +137,33 @@ export const laneCard = (lane: Lane, used: number, window: number): Card => {
     list: counted(spans.filter((s) => s._tag !== "Thinking").map(nameOf)),
   };
 };
+
+// One request, or the several a mark stands for.
+export const requestsCard = (requests: readonly Request[]): Card => {
+  const [first] = requests;
+  const hosts = counted(requests.map((r) => r.host));
+  return requests.length === 1 && first
+    ? {
+        title: first.host,
+        subtitle: `via ${first.via}`,
+        facts: [["at", duration(first.at)]],
+        list: first.label ? [["request", first.label.slice(0, 60)]] : [],
+      }
+    : {
+        title: plural(requests.length, "request"),
+        subtitle: "outside the machine",
+        facts: [["at", duration(Math.min(...requests.map((r) => r.at)))]],
+        list: hosts,
+      };
+};
+
+export const hostCard = (h: HostSummary): Card => ({
+  title: h.host,
+  subtitle: "external host",
+  facts: [
+    ["requests", String(h.count)],
+    ["first", duration(h.first)],
+    ["last", duration(h.last)],
+  ],
+  list: h.via.map((v): Fact => ["via", v]),
+});

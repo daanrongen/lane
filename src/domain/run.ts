@@ -81,6 +81,16 @@ export interface Entry {
   readonly tokens: number;
 }
 
+// An agent reaching outside the machine: a fetch, a search, a networked command.
+export interface Request {
+  readonly agentId: AgentId;
+  readonly at: number;
+  // A hostname, or the program (like git) when the destination isn't visible.
+  readonly host: string;
+  readonly via: string;
+  readonly label: string;
+}
+
 export interface Tool {
   readonly name: string;
   readonly tokens: number;
@@ -105,6 +115,7 @@ export interface Run {
   readonly finishes: readonly Finish[];
   readonly context: readonly Entry[];
   readonly setups: readonly Setup[];
+  readonly requests: readonly Request[];
 }
 
 export const emptyRun = (sessionId: SessionId, startedAt: number): Run => ({
@@ -117,4 +128,5 @@ export const emptyRun = (sessionId: SessionId, startedAt: number): Run => ({
   finishes: [],
   context: [],
   setups: [],
+  requests: [],
 });

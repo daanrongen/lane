@@ -5,6 +5,7 @@ import { useMetrics, useTheme } from "@/ui/lib/context.ts";
 import type { Frame } from "@/ui/lib/layout.ts";
 import { alpha, laneColor } from "@/ui/lib/theme.ts";
 import { Bar } from "@/ui/molecules/Bar.tsx";
+import { RequestMark } from "@/ui/molecules/RequestMark.tsx";
 
 export const TimelinePlot = ({ frame }: { frame: Frame }) => {
   const r = useMetrics();
@@ -39,6 +40,15 @@ export const TimelinePlot = ({ frame }: { frame: Frame }) => {
             box={box}
             color={laneColor(theme, i)}
             names={names}
+          />
+        )),
+      )}
+      {frame.rows.flatMap((row, i) =>
+        row.marks.map((mark) => (
+          <RequestMark
+            key={`${row.lane.agent.id}:mark:${mark.x}`}
+            mark={mark}
+            color={laneColor(theme, i)}
           />
         )),
       )}

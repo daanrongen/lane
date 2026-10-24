@@ -100,4 +100,20 @@ describe("makeCodexDecoder", () => {
     ]);
     expect(run.finishes.at(0)).toMatchObject({ agentId: main, at: 5 });
   });
+
+  test("urls in shell commands and web searches are requests", () => {
+    const { run } = decode([
+      started(0),
+      call(1, "c1", "shell", { command: ["curl", "https://api.z.dev/x"] }),
+      {
+        timestamp: "2026-01-01T00:00:02Z",
+        type: "response_item",
+        payload: { type: "web_search_call", action: { query: "codex" } },
+      },
+    ]);
+    expect(run.requests.map((r) => [r.host, r.via])).toEqual([
+      ["api.z.dev", "shell"],
+      ["web search", "web_search"],
+    ]);
+  });
 });

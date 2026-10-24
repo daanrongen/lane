@@ -1,6 +1,7 @@
 import { Row } from "@/ui/atoms/Box.tsx";
 import { useMetrics } from "@/ui/lib/context.ts";
 import { LegendItem } from "@/ui/molecules/LegendItem.tsx";
+import { LegendRing } from "@/ui/molecules/LegendRing.tsx";
 
 export const Legend = () => {
   const r = useMetrics();
@@ -11,6 +12,7 @@ export const Legend = () => {
       <LegendItem kind="McpCall" label="mcp call" />
       <LegendItem kind="Waiting" label="waiting" />
       <LegendItem kind="ToolCall" failed label="failed" />
+      <LegendRing label="request" />
     </Row>
   );
 };

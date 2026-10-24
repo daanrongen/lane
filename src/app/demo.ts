@@ -91,6 +91,17 @@ const mcp = (
   ];
 };
 
+const request = (
+  agentId: AgentId,
+  at: number,
+  host: string,
+  via: string,
+  label = "",
+): RunEvent => ({
+  _tag: "RequestMade",
+  request: { agentId, at, host, via, label },
+});
+
 // The orchestrator hands work to `to` and waits until `to` finishes.
 const delegate = (
   to: AgentId,
@@ -202,6 +213,29 @@ export const demoEvents: readonly RunEvent[] = [
       ],
     },
   },
+  request(researcher, 4.2, "web search", "WebSearch", "checkout drop causes"),
+  request(
+    researcher,
+    8.2,
+    "docs.stripe.com",
+    "WebFetch",
+    "https://docs.stripe.com/payments",
+  ),
+  request(
+    researcher,
+    9.5,
+    "docs.stripe.com",
+    "WebFetch",
+    "https://docs.stripe.com/radar",
+  ),
+  request(
+    analyst,
+    5.6,
+    "api.datadoghq.com",
+    "Bash",
+    "curl https://api.datadoghq.com/api/v1/query",
+  ),
+  request(writer, 20.5, "git", "Bash", "git push origin report"),
   ctx(main, "Message", "Messages", 4_200),
   ctx(main, "Tool", "Agent", 3_100),
   ctx(main, "File", "src/api/", 6_100),
@@ -254,6 +288,21 @@ export const demoCodexEvents: readonly RunEvent[] = [
     _tag: "SetupReported",
     setup: { agentId: codex, at: 0, system: 5_800, tools: [] },
   },
+  request(
+    codex,
+    2.2,
+    "registry.npmjs.org",
+    "shell",
+    "curl https://registry.npmjs.org/vite",
+  ),
+  request(codex, 5.3, "web search", "web_search", "vite 7 config"),
+  request(
+    codex,
+    14.5,
+    "github.com",
+    "shell",
+    "git clone https://github.com/x/y",
+  ),
   ctx(codex, "Message", "Messages", 6_400),
   ctx(codex, "Tool", "shell", 18_200),
   ctx(codex, "Tool", "apply_patch", 7_300),

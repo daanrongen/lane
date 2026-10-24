@@ -1,5 +1,5 @@
 import type { AgentId, SpanId } from "@/domain/ids.ts";
-import type { Agent, Entry, Setup, Span, Turn } from "@/domain/run.ts";
+import type { Agent, Entry, Request, Setup, Span, Turn } from "@/domain/run.ts";
 
 export type RunEvent =
   | { readonly _tag: "RunStarted"; readonly startedAt: number }
@@ -27,4 +27,5 @@ export type RunEvent =
       readonly agentId: AgentId;
       readonly at: number;
     }
-  | { readonly _tag: "SetupReported"; readonly setup: Setup };
+  | { readonly _tag: "SetupReported"; readonly setup: Setup }
+  | { readonly _tag: "RequestMade"; readonly request: Request };

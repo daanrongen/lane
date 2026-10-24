@@ -43,6 +43,8 @@ export const fold = (run: Run, e: RunEvent): Run => {
         ...run,
         context: run.context.filter((c) => c.agentId !== e.agentId),
       };
+    case "RequestMade":
+      return { ...run, requests: [...run.requests, e.request] };
     case "SetupReported":
       return { ...run, setups: [...run.setups, e.setup] };
   }

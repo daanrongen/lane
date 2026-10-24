@@ -1,6 +1,6 @@
 import { scaleLinear } from "d3-scale";
 import type { Axis } from "@/domain/axis.ts";
-import type { Handoff, Span } from "@/domain/run.ts";
+import type { Handoff, Request, Span } from "@/domain/run.ts";
 import {
   type Bar,
   isFailed,
@@ -32,10 +32,16 @@ export interface BarBox extends Box {
   readonly count: number;
 }
 
+// Requests close together share one mark.
+export interface RequestMark extends Box {
+  readonly requests: readonly Request[];
+}
+
 export interface LaneRow {
   readonly lane: Lane;
   readonly y: number;
   readonly bars: readonly BarBox[];
+  readonly marks: readonly RequestMark[];
 }
 
 // Elbows: down from the parent at the spawn, across into the child, and back at the return.
@@ -62,6 +68,8 @@ export interface Frame {
 }
 
 const DOT = 6;
+const MARK = 8;
+const MARK_MERGE = 6;
 const TINY = 3;
 const JOIN = 2;
 const LABEL_PAD = 8;
@@ -136,7 +144,13 @@ export const layout = (tl: Timeline, axis: Axis, m: Metrics): Frame => {
         height: m.barHeight,
       };
     });
-    return { lane, y, bars: coalesce(boxes) };
+    const barTop = y + (m.rowHeight - m.barHeight) / 2;
+    return {
+      lane,
+      y,
+      bars: coalesce(boxes),
+      marks: marksOf(lane.requests, xOf, barTop - MARK / 2),
+    };
   });
 
   const links = tl.links.flatMap((link): LinkBoxes[] => {
@@ -212,6 +226,25 @@ export const layout = (tl: Timeline, axis: Axis, m: Metrics): Frame => {
     labels,
     height,
   };
+};
+
+// Marks sit on the top edge of the lane's bars, merged where they would touch.
+const marksOf = (
+  requests: readonly Request[],
+  xOf: (t: number) => number,
+  y: number,
+): RequestMark[] => {
+  const out: RequestMark[] = [];
+  for (const r of [...requests].sort((a, b) => a.at - b.at)) {
+    const x = xOf(r.at) - MARK / 2;
+    const prev = out.at(-1);
+    if (prev && x - prev.x < MARK_MERGE) {
+      out[out.length - 1] = { ...prev, requests: [...prev.requests, r] };
+    } else {
+      out.push({ x, y, width: MARK, height: MARK, requests: [r] });
+    }
+  }
+  return out;
 };
 
 const dot = (x: number, y: number): Box => ({

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { makeAxis } from "@/domain/axis.ts";
 import { contextMap, contextUsed, laneWindow } from "@/domain/context.ts";
 import { mcpServers } from "@/domain/mcp.ts";
+import { hosts } from "@/domain/network.ts";
 import { timeline } from "@/domain/timeline.ts";
 import { Box, Row } from "@/ui/atoms/Box.tsx";
 import { MetricsContext } from "@/ui/lib/context.ts";
@@ -14,6 +15,7 @@ import { ContextMap } from "@/ui/organisms/ContextMap.tsx";
 import { Header } from "@/ui/organisms/Header.tsx";
 import { Legend } from "@/ui/organisms/Legend.tsx";
 import { McpServers } from "@/ui/organisms/McpServers.tsx";
+import { NetworkHosts } from "@/ui/organisms/NetworkHosts.tsx";
 import { TimelineChart } from "@/ui/organisms/TimelineChart.tsx";
 
 const IDLE = { maxIdle: 60, collapsedTo: 2 };
@@ -78,6 +80,7 @@ export const RunPage = ({
       lane ? laneWindow(lane) : 0,
     );
   }, [run.context, run.setups, lane]);
+  const reached = useMemo(() => hosts(run.requests), [run.requests]);
   const servers = useMemo(
     () => mcpServers(run.setups, run.spans),
     [run.setups, run.spans],
@@ -106,6 +109,7 @@ export const RunPage = ({
         <Legend />
         <McpServers servers={servers} />
       </Row>
+      <NetworkHosts hosts={reached} />
       {lane ? <ContextMap map={map} agent={lane.agent.name} /> : null}
     </MetricsContext.Provider>
   );

@@ -4,6 +4,7 @@ import {
   addUsage,
   emptyUsage,
   type Handoff,
+  type Request,
   type Run,
   type Span,
   type Turn,
@@ -25,6 +26,7 @@ export interface Lane {
   readonly bars: readonly Bar[];
   readonly model?: string;
   readonly lastTurn?: Turn;
+  readonly requests: readonly Request[];
   readonly lastActivity: number;
   // Finished after its last activity; an unfinished agent may only be stalled.
   readonly finished: boolean;
@@ -105,6 +107,7 @@ export const timeline = (run: Run, now: number): Timeline => {
       bars,
       model: lastTurn?.model,
       lastTurn,
+      requests: run.requests.filter((r) => r.agentId === agent.id),
       lastActivity,
       finished: finishedAt !== undefined && finishedAt >= lastActivity,
     };

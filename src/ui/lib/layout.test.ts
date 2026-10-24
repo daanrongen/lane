@@ -148,3 +148,24 @@ describe("layout links", () => {
     expect((across?.x ?? 0) + (across?.width ?? 0)).toBeCloseTo(child?.x ?? -1);
   });
 });
+
+describe("layout request marks", () => {
+  const request = (at: number) => ({
+    agentId: AgentId("main"),
+    at,
+    host: "h.dev",
+    via: "Bash",
+    label: "",
+  });
+
+  test("marks sit on the bar edge and merge when they would touch", () => {
+    const run = {
+      ...single(thinking("a", 0, 100)),
+      requests: [request(10), request(10.2), request(50)],
+    };
+    const [row] = frameOf(run).rows;
+    expect(row?.marks.map((x) => x.requests.length)).toEqual([2, 1]);
+    const bar = row?.bars[0];
+    expect(row?.marks[0]?.y).toBeLessThan(bar?.y ?? 0);
+  });
+});

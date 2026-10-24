@@ -1,10 +1,12 @@
 import type { Decoder } from "@/adapters/shared/decoder.ts";
 import { arr, type Json, num, rec, str } from "@/adapters/shared/json.ts";
+import { requestEvents, SEARCH_HOST } from "@/adapters/shared/requests.ts";
 import { sizeOf, tokensOf } from "@/adapters/shared/sizing.ts";
 import type { RunEvent } from "@/domain/events.ts";
 import type { AgentId } from "@/domain/ids.ts";
 import { SpanId } from "@/domain/ids.ts";
 import { mcpName } from "@/domain/mcp.ts";
+import { targetsOfCommand } from "@/domain/network.ts";
 import { type Entry, emptyUsage } from "@/domain/run.ts";
 
 export interface CodexConfig {
@@ -132,6 +134,7 @@ export const makeCodexDecoder = (cfg: CodexConfig): Decoder => {
     const opened = open(id, name, label, at);
     return [
       ...added(at, { kind: "Tool", label: name }, sizeOf(args)),
+      ...requestEvents(agentId, at, name, targetsOfCommand(label)),
       ...opened,
     ];
   };
@@ -180,6 +183,12 @@ export const makeCodexDecoder = (cfg: CodexConfig): Decoder => {
       case "local_shell_call": {
         const cmd = commandOf(rec(p.action));
         return call(p, "shell", cmd, cmd ?? "shell", at);
+      }
+      case "web_search_call": {
+        const query = str(rec(p.action)?.query) ?? "";
+        return requestEvents(agentId, at, "web_search", [
+          { host: SEARCH_HOST, label: query },
+        ]);
       }
       case "function_call_output":
       case "custom_tool_call_output":

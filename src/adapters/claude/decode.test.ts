@@ -317,3 +317,26 @@ describe("setup, compaction and mcp", () => {
     });
   });
 });
+
+describe("network requests", () => {
+  const requests = (lines: unknown[]) =>
+    foldAll(emptyRun(SessionId("s"), 0), decodeAll(cfg, lines)).requests;
+
+  test("WebFetch, WebSearch and urls in shell commands are requests", () => {
+    const out = requests([
+      assistant(1, "m1", [
+        toolUse("t1", "WebFetch", { url: "https://docs.x.dev/a" }),
+        toolUse("t2", "WebSearch", { query: "bun compile" }),
+        toolUse("t3", "Bash", { command: "curl -s https://api.y.io/v1" }),
+        toolUse("t4", "Bash", { command: "git push" }),
+        toolUse("t5", "Bash", { command: "ls" }),
+      ]),
+    ]);
+    expect(out.map((r) => [r.host, r.via])).toEqual([
+      ["docs.x.dev", "WebFetch"],
+      ["web search", "WebSearch"],
+      ["api.y.io", "Bash"],
+      ["git", "Bash"],
+    ]);
+  });
+});

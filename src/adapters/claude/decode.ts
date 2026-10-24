@@ -1,6 +1,11 @@
 import type { Decoder } from "@/adapters/shared/decoder.ts";
 import { arr, type Json, num, rec, str } from "@/adapters/shared/json.ts";
 import {
+  fetchTarget,
+  requestEvents,
+  SEARCH_HOST,
+} from "@/adapters/shared/requests.ts";
+import {
   IMAGE_TOKENS,
   imagesIn,
   sizeOf,
@@ -9,6 +14,7 @@ import {
 import type { RunEvent } from "@/domain/events.ts";
 import { AgentId, SpanId } from "@/domain/ids.ts";
 import { mcpName } from "@/domain/mcp.ts";
+import { type Target, targetsOfCommand } from "@/domain/network.ts";
 import type { Agent, Entry, Usage } from "@/domain/run.ts";
 
 export interface Spawn {
@@ -40,6 +46,20 @@ const labelOf = (name: string, input: Json | undefined) => {
 
 // Attachments that are logs of the setup, not content the model reads.
 const NOT_CONTEXT = new Set(["prompt_snapshot", "deferred_tools_record"]);
+
+// What a tool call reaches on the network, as far as its input shows.
+const targetsOf = (name: string, input: Json | undefined): Target[] => {
+  switch (name) {
+    case "WebFetch":
+      return fetchTarget(str(input?.url));
+    case "WebSearch":
+      return [{ host: SEARCH_HOST, label: str(input?.query) ?? "" }];
+    case "Bash":
+      return targetsOfCommand(str(input?.command) ?? "");
+    default:
+      return [];
+  }
+};
 
 const FILE_TOOLS = new Set(["Read", "Edit", "Write", "NotebookEdit"]);
 
@@ -159,7 +179,10 @@ export const makeDecoder = (cfg: DecoderConfig): Decoder => {
     const input = rec(b.input);
     const source = sourceOf(name, input);
     sources.set(id, source);
-    const entry = added(at, source, sizeOf(b.input));
+    const entry = [
+      ...added(at, source, sizeOf(b.input)),
+      ...requestEvents(agentId, at, name, targetsOf(name, input)),
+    ];
     if (!SPAWN_TOOLS.has(name))
       return [...entry, ...called(id, name, input, at)];
     pending.set(id, { name, input, at });
