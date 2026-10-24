@@ -1,0 +1,18 @@
+{
+  "root": true,
+  "$schema": "https://biomejs.dev/schemas/2.6.3/schema.json",
+  "formatter": {
+    "indentStyle": "space"
+  },
+  "linter": {
+    "enabled": true
+  },
+  "javascript": {
+    "formatter": {
+      "quoteStyle": "double"
+    }
+  },
+  "files": {
+    "includes": ["src/**", "*.json"]
+  }
+}
