@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import type { Asset } from "@/domain/assets.ts";
 import { makeAxis } from "@/domain/axis.ts";
 import { contextMap, contextUsed, laneWindow } from "@/domain/context.ts";
 import { mcpServers } from "@/domain/mcp.ts";
@@ -11,6 +12,7 @@ import { useStore } from "@/ui/lib/hooks/useStore.ts";
 import { layout } from "@/ui/lib/layout.ts";
 import type { Keys, OpenedRun } from "@/ui/lib/ports.ts";
 import { responsive, type Size } from "@/ui/lib/responsive.ts";
+import { AssetRows } from "@/ui/organisms/AssetRows.tsx";
 import { ContextMap } from "@/ui/organisms/ContextMap.tsx";
 import { Header } from "@/ui/organisms/Header.tsx";
 import { Legend } from "@/ui/organisms/Legend.tsx";
@@ -26,6 +28,7 @@ export const RunPage = ({
   title,
   cwd,
   harness,
+  assets,
   size,
   zoom,
   keys,
@@ -35,6 +38,7 @@ export const RunPage = ({
   title: string;
   cwd: string;
   harness: string;
+  assets: readonly Asset[];
   size: Size;
   zoom: number;
   keys: Keys;
@@ -111,6 +115,7 @@ export const RunPage = ({
       </Row>
       <NetworkHosts hosts={reached} />
       {lane ? <ContextMap map={map} agent={lane.agent.name} /> : null}
+      <AssetRows assets={assets} />
     </MetricsContext.Provider>
   );
 };

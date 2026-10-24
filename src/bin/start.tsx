@@ -6,13 +6,14 @@ import {
 } from "@/adapters/macos/appearance.ts";
 import { makeUiPorts } from "@/app/bridge.ts";
 import type { SessionsStore } from "@/app/SessionsStore.ts";
+import type { Assets } from "@/ports/Assets.ts";
 import type { Harnesses } from "@/ports/Harness.ts";
 import { App } from "@/ui/App.tsx";
 import { createKeys } from "@/ui/lib/keys.ts";
 
 // Entrypoints differ only in the layer they provide.
 export const start = async (
-  layer: Layer.Layer<SessionsStore | Harnesses, unknown>,
+  layer: Layer.Layer<SessionsStore | Harnesses | Assets, unknown>,
 ) => {
   answerAppearanceQuery();
   const ports = await makeUiPorts(layer);

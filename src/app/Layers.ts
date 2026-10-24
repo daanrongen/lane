@@ -1,23 +1,32 @@
 import { BunFileSystem } from "@effect/platform-bun";
-import { Layer, Schedule } from "effect";
+import { Effect, Layer, Schedule } from "effect";
+import { AgentsHome } from "@/adapters/agents/AgentsHome.ts";
+import { agentsAssets } from "@/adapters/agents/assets.ts";
+import { claudeAssets } from "@/adapters/claude/assets.ts";
 import { ClaudeHome } from "@/adapters/claude/ClaudeHome.ts";
 import { RunSourceFs } from "@/adapters/claude/RunSourceFs.ts";
 import {
   processAlive,
   SessionCatalogFs,
 } from "@/adapters/claude/SessionCatalogFs.ts";
+import { codexAssets } from "@/adapters/codex/assets.ts";
 import { CodexHome } from "@/adapters/codex/CodexHome.ts";
 import { RunSourceCodex } from "@/adapters/codex/runs.ts";
 import { SessionCatalogCodex } from "@/adapters/codex/sessions.ts";
+import { assetReaderMemory } from "@/adapters/memory/AssetReaderMemory.ts";
 import { RunSourceMemory } from "@/adapters/memory/RunSourceMemory.ts";
 import { SessionCatalogMemory } from "@/adapters/memory/SessionCatalogMemory.ts";
+import { ollamaAssets } from "@/adapters/ollama/assets.ts";
+import { OllamaHome } from "@/adapters/ollama/OllamaHome.ts";
 import {
+  demoAssets,
   demoCodexEvents,
   demoCodexSession,
   demoEvents,
   demoSession,
 } from "@/app/demo.ts";
 import { SessionsStoreLive } from "@/app/SessionsStore.ts";
+import { assetsOf } from "@/ports/Assets.ts";
 import { harness, harnessesOf } from "@/ports/Harness.ts";
 
 const sessionPoll = Schedule.spaced("1 second");
@@ -39,8 +48,16 @@ const codex = harness(
 );
 
 // The agent harnesses on this machine, followed live.
+const liveAssets = assetsOf(
+  agentsAssets.pipe(Effect.provide(AgentsHome.default)),
+  claudeAssets.pipe(Effect.provide(ClaudeHome.default)),
+  codexAssets.pipe(Effect.provide(CodexHome.default)),
+  ollamaAssets.pipe(Effect.provide(OllamaHome.default)),
+);
+
 export const LiveLayer = SessionsStoreLive(sessionPoll).pipe(
   Layer.provideMerge(harnessesOf(claude, codex)),
+  Layer.provideMerge(liveAssets),
   Layer.provide(BunFileSystem.layer),
 );
 
@@ -63,4 +80,5 @@ const demoCodex = harness(
 // Scripted runs, so the UI works without any harness data.
 export const DemoLayer = SessionsStoreLive(sessionPoll).pipe(
   Layer.provideMerge(harnessesOf(demoClaude, demoCodex)),
+  Layer.provideMerge(assetsOf(assetReaderMemory("demo", demoAssets))),
 );

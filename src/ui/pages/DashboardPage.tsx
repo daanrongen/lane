@@ -1,12 +1,19 @@
 import { useWindowSize } from "@gpuix/react";
 import { useEffect, useRef, useState } from "react";
+import type { Asset } from "@/domain/assets.ts";
 import type { Session } from "@/domain/session.ts";
 import { Box } from "@/ui/atoms/Box.tsx";
 import { Text } from "@/ui/atoms/Text.tsx";
 import { MetricsContext } from "@/ui/lib/context.ts";
 import { sessionTitle } from "@/ui/lib/format.ts";
 import { useStore } from "@/ui/lib/hooks/useStore.ts";
-import type { Keys, OpenedRun, UiPorts } from "@/ui/lib/ports.ts";
+import type {
+  Keys,
+  OpenedAssets,
+  OpenedRun,
+  Store,
+  UiPorts,
+} from "@/ui/lib/ports.ts";
 import { responsive } from "@/ui/lib/responsive.ts";
 import { KeyHints } from "@/ui/organisms/KeyHints.tsx";
 import { SessionList } from "@/ui/organisms/SessionList.tsx";
@@ -43,6 +50,33 @@ const useOpened = (ports: UiPorts, session: Session | undefined) => {
   return opened;
 };
 
+const useAssets = (ports: UiPorts, cwd: string | undefined) => {
+  const [opened, setOpened] = useState<OpenedAssets>();
+  useEffect(() => {
+    if (!cwd) return;
+    let cancelled = false;
+    let current: OpenedAssets | undefined;
+    ports.openAssets(cwd).then((o) => {
+      if (cancelled) return o.close();
+      current = o;
+      setOpened(o);
+    });
+    return () => {
+      cancelled = true;
+      current?.close();
+      setOpened(undefined);
+    };
+  }, [ports, cwd]);
+  return opened;
+};
+
+// One shared array: a fresh one per read would look like a change every time.
+const NO_ASSETS: readonly Asset[] = [];
+const none: Store<readonly Asset[]> = {
+  get: () => NO_ASSETS,
+  subscribe: () => () => {},
+};
+
 // Owns selection, zoom and keys; the rest is presentation.
 export const DashboardPage = ({
   ports,
@@ -59,6 +93,7 @@ export const DashboardPage = ({
   const current = Math.min(index, last);
   const selected = sessions[current];
   const opened = useOpened(ports, selected);
+  const assets = useStore(useAssets(ports, selected?.cwd)?.assets ?? none);
   const many = sessions.length > 1;
 
   useEffect(
@@ -97,6 +132,7 @@ export const DashboardPage = ({
             title={sessionTitle(selected)}
             cwd={selected.cwd}
             harness={selected.harness}
+            assets={assets}
             size={size}
             zoom={zoom}
             keys={keys}

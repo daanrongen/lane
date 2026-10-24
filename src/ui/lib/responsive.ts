@@ -53,7 +53,7 @@ export const responsive = (
   const labels = clamp(Math.round(inner * 0.16), px(160), px(240));
 
   // Header, axis labels and footer take a fixed share; rows split the rest.
-  const chrome = px(282) + px(100);
+  const chrome = px(282) + px(100) + px(96);
   const rowHeight = clamp(
     Math.floor((size.height - chrome) / Math.max(lanes, 1)),
     px(36),

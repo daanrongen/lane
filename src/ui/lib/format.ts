@@ -33,3 +33,13 @@ export const exact = (seconds: number) =>
 
 export const percent = (part: number, whole: number) =>
   whole > 0 ? `${Math.round((part / whole) * 100)}%` : "0%";
+
+export const bytes = (n: number) =>
+  n >= 1e9
+    ? `${(n / 1e9).toFixed(1).replace(/\.0$/, "")} GB`
+    : n >= 1e6
+      ? `${Math.round(n / 1e6)} MB`
+      : `${Math.round(n / 1e3)} KB`;
+
+export const clip = (s: string, max: number) =>
+  s.length > max ? `${s.slice(0, max - 1)}…` : s;

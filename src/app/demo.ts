@@ -1,3 +1,4 @@
+import type { Asset } from "@/domain/assets.ts";
 import type { RunEvent } from "@/domain/events.ts";
 import { AgentId, SessionId, SpanId } from "@/domain/ids.ts";
 import type { Session } from "@/domain/session.ts";
@@ -307,4 +308,69 @@ export const demoCodexEvents: readonly RunEvent[] = [
   ctx(codex, "Tool", "shell", 18_200),
   ctx(codex, "Tool", "apply_patch", 7_300),
   ctx(codex, "Message", "Thinking", 9_100),
+];
+
+const skills = (source: string, names: readonly string[]): Asset[] =>
+  names.map((name) => ({
+    _tag: "Skill",
+    source,
+    name,
+    description: `How to use ${name} from the command line`,
+  }));
+
+const GB = 1_000_000_000;
+
+// What the demo machine has set up, across harnesses and a provider.
+export const demoAssets: readonly Asset[] = [
+  ...skills("agents", [
+    "mise",
+    "pandoc",
+    "ssh",
+    "nats",
+    "ollama",
+    "container",
+    "kubernetes",
+    "terraform",
+  ]),
+  ...skills("claude", ["blender", "fm", "infisical", "pass", "search"]),
+  ...skills("codex", [
+    "mise",
+    "container",
+    "tailscale",
+    "obsidian",
+    "qmd",
+    "tomtom",
+  ]),
+  ...skills("project", ["checkout-flow"]),
+  { _tag: "Setting", source: "claude", key: "model", value: "sonnet" },
+  { _tag: "Setting", source: "claude", key: "effortLevel", value: "high" },
+  { _tag: "Setting", source: "claude", key: "defaultMode", value: "auto" },
+  { _tag: "Rule", source: "claude", effect: "allow", pattern: "WebFetch" },
+  {
+    _tag: "Rule",
+    source: "claude",
+    effect: "allow",
+    pattern: "Bash(git status)",
+  },
+  { _tag: "Rule", source: "claude", effect: "deny", pattern: "Read(.env)" },
+  { _tag: "Plugin", source: "claude", name: "typescript-lsp@official" },
+  { _tag: "Plugin", source: "claude", name: "basecamp@37signals" },
+  { _tag: "Setting", source: "codex", key: "model", value: "gpt-5.5" },
+  {
+    _tag: "Setting",
+    source: "codex",
+    key: "model_reasoning_effort",
+    value: "high",
+  },
+  { _tag: "Mcp", source: "codex", name: "linear", transport: "http" },
+  { _tag: "Mcp", source: "project", name: "datadog", transport: "http" },
+  { _tag: "Mcp", source: "project", name: "sentry", transport: "http" },
+  { _tag: "Model", source: "ollama", name: "gpt-oss:20b", bytes: 13 * GB },
+  { _tag: "Model", source: "ollama", name: "granite4:latest", bytes: 2.1 * GB },
+  {
+    _tag: "Model",
+    source: "ollama",
+    name: "nomic-embed-text:latest",
+    bytes: 0.27 * GB,
+  },
 ];
