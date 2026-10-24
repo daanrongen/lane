@@ -53,6 +53,7 @@ export const ContextMap = ({
           <ContextTile
             key={`${tile.cell.kind}:${tile.cell.label}`}
             tile={tile}
+            map={map}
           />
         ))}
       </Box>

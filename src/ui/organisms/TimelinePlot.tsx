@@ -1,13 +1,18 @@
+import { useMemo } from "react";
 import { Box } from "@/ui/atoms/Box.tsx";
-import { Pill } from "@/ui/atoms/Pill.tsx";
 import { Rule } from "@/ui/atoms/Rule.tsx";
 import { useMetrics, useTheme } from "@/ui/lib/context.ts";
 import type { Frame } from "@/ui/lib/layout.ts";
 import { alpha, laneColor } from "@/ui/lib/theme.ts";
+import { Bar } from "@/ui/molecules/Bar.tsx";
 
 export const TimelinePlot = ({ frame }: { frame: Frame }) => {
   const r = useMetrics();
   const theme = useTheme();
+  const names = useMemo(
+    () => new Map(frame.rows.map((r) => [r.lane.agent.id, r.lane.agent.name])),
+    [frame.rows],
+  );
   return (
     <Box
       style={{
@@ -29,10 +34,11 @@ export const TimelinePlot = ({ frame }: { frame: Frame }) => {
       ))}
       {frame.rows.flatMap((row, i) =>
         row.bars.map((box) => (
-          <Pill
+          <Bar
             key={`${row.lane.agent.id}:${box.bar.spans[0]?.id}`}
             box={box}
             color={laneColor(theme, i)}
+            names={names}
           />
         )),
       )}

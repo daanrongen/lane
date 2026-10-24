@@ -2,11 +2,19 @@ import { describe, expect, test } from "bun:test";
 import type { Cell } from "@/domain/context.ts";
 import { tiles } from "@/ui/lib/treemap.ts";
 
+const cell = (kind: Cell["kind"], label: string, tokens: number): Cell => ({
+  kind,
+  label,
+  tokens,
+  count: 1,
+  parts: [],
+});
+
 const cells: Cell[] = [
-  { kind: "System", label: "System & tools", tokens: 100 },
-  { kind: "File", label: "src/", tokens: 50 },
-  { kind: "Message", label: "Messages", tokens: 50 },
-  { kind: "Free", label: "Free", tokens: 800 },
+  cell("System", "System & tools", 100),
+  cell("File", "src/", 50),
+  cell("Message", "Messages", 50),
+  cell("Free", "Free", 800),
 ];
 
 describe("tiles", () => {
@@ -29,19 +37,16 @@ describe("tiles", () => {
   });
 
   test("a large context takes its real share", () => {
-    const big: Cell[] = [
-      { kind: "File", label: "src/", tokens: 600 },
-      { kind: "Free", label: "Free", tokens: 400 },
-    ];
+    const big: Cell[] = [cell("File", "src/", 600), cell("Free", "Free", 400)];
     const f = tiles(big, 1000, 200, 4).find((t) => t.cell.kind === "Free");
     expect(f?.x).toBeGreaterThanOrEqual(600);
     expect(f?.x).toBeLessThan(610);
   });
 
   test("nothing used leaves only free space", () => {
-    const cell: Cell = { kind: "Free", label: "Free", tokens: 10 };
-    expect(tiles([cell], 300, 100, 4)).toEqual([
-      { cell, x: 0, y: 0, width: 300, height: 100 },
+    const free = cell("Free", "Free", 10);
+    expect(tiles([free], 300, 100, 4)).toEqual([
+      { cell: free, x: 0, y: 0, width: 300, height: 100 },
     ]);
   });
 });

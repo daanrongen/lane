@@ -1,6 +1,6 @@
 import { scaleLinear } from "d3-scale";
 import type { Axis } from "@/domain/axis.ts";
-import type { Handoff } from "@/domain/run.ts";
+import type { Handoff, Span } from "@/domain/run.ts";
 import {
   type Bar,
   isFailed,
@@ -28,6 +28,7 @@ export interface Box {
 // A box can stand for several bars too narrow to tell apart.
 export interface BarBox extends Box {
   readonly bar: Bar;
+  readonly spans: readonly Span[];
   readonly count: number;
 }
 
@@ -83,6 +84,7 @@ const coalesce = (boxes: readonly BarBox[]): BarBox[] => {
       out[out.length - 1] = {
         ...prev,
         bar: prev.width >= box.width ? prev.bar : box.bar,
+        spans: [...prev.spans, ...box.spans],
         width: Math.max(prev.x + prev.width, box.x + box.width) - prev.x,
         count: prev.count + box.count,
       };
@@ -126,6 +128,7 @@ export const layout = (tl: Timeline, axis: Axis, m: Metrics): Frame => {
       const x = xOf(bar.start);
       return {
         bar,
+        spans: bar.spans,
         count: 1,
         x,
         y: y + (m.rowHeight - m.barHeight) / 2,

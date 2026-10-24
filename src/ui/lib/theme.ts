@@ -1,5 +1,7 @@
 export interface Theme {
   readonly background: string;
+  // Opaque raised surface, for hover cards.
+  readonly surface: string;
   readonly text: string;
   readonly dim: string;
   readonly line: string;
@@ -34,6 +36,7 @@ interface Tokens {
 
 const fromTokens = (t: Tokens): Theme => ({
   background: t.background,
+  surface: mix(t.background, t.foreground, 0.08),
   text: t.foreground,
   dim: mix(t.foreground, t.background, 0.45),
   line: t.selection,

@@ -1,3 +1,4 @@
+import * as Tooltip from "@gpuix/react/tooltip";
 import { ThemeContext } from "@/ui/lib/context.ts";
 import { useStore } from "@/ui/lib/hooks/useStore.ts";
 import type { Keys, Scheme, Store, UiPorts } from "@/ui/lib/ports.ts";
@@ -14,6 +15,8 @@ export const App = ({
   keys: Keys;
 }) => (
   <ThemeContext.Provider value={themes[useStore(scheme)]}>
-    <DashboardPage ports={ports} keys={keys} />
+    <Tooltip.Provider delayDuration={120}>
+      <DashboardPage ports={ports} keys={keys} />
+    </Tooltip.Provider>
   </ThemeContext.Provider>
 );

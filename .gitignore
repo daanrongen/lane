@@ -3,5 +3,4 @@ dist
 .DS_Store
 *.log
 shot*.png
-.claude/settings.local.json
 .*.bun-build

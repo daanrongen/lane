@@ -24,11 +24,23 @@ export const contextGauge = (
 
 export type CellKind = Entry["kind"] | "System" | "Tools" | "Free";
 
+export interface Part {
+  readonly name: string;
+  readonly tokens: number;
+}
+
 export interface Cell {
   readonly kind: CellKind;
   readonly label: string;
   readonly tokens: number;
+  readonly count: number;
+  // The largest things inside, for hover details.
+  readonly parts: readonly Part[];
 }
+
+const PARTS = 6;
+const biggest = (parts: Iterable<Part>) =>
+  [...parts].sort((a, b) => b.tokens - a.tokens).slice(0, PARTS);
 
 export interface ContextMap {
   readonly used: number;
@@ -48,10 +60,13 @@ const grouped = (entries: readonly Entry[]): Cell[] => {
   const sums = new Map<string, Cell>();
   for (const { kind, label, tokens } of entries) {
     const key = `${kind}:${label}`;
+    const prev = sums.get(key);
     sums.set(key, {
       kind,
       label,
-      tokens: (sums.get(key)?.tokens ?? 0) + tokens,
+      tokens: (prev?.tokens ?? 0) + tokens,
+      count: (prev?.count ?? 0) + 1,
+      parts: [],
     });
   }
   return [...sums.values()].sort((a, b) => b.tokens - a.tokens);
@@ -66,25 +81,37 @@ const withRest = (cells: Cell[]): Cell[] => {
       kind: "Tool",
       label: `${rest.length} more`,
       tokens: rest.reduce((n, c) => n + c.tokens, 0),
+      count: rest.reduce((n, c) => n + c.count, 0),
+      parts: biggest(rest.map((c) => ({ name: c.label, tokens: c.tokens }))),
     },
   ];
 };
 
 // Native tools share one cell; each MCP server gets its own.
 const definitions = (setup: Setup): Cell[] => {
-  const tokens = new Map<string, number>();
+  const groups = new Map<string, Part[]>();
   for (const t of setup.tools) {
-    const label = mcpName(t.name)
-      ? `mcp · ${mcpName(t.name)?.server}`
-      : "Tool definitions";
-    tokens.set(label, (tokens.get(label) ?? 0) + t.tokens);
+    const mcp = mcpName(t.name);
+    const label = mcp ? `mcp · ${mcp.server}` : "Tool definitions";
+    groups.set(label, [
+      ...(groups.get(label) ?? []),
+      { name: mcp?.tool ?? t.name, tokens: t.tokens },
+    ]);
   }
   return [
-    { kind: "System", label: "System prompt", tokens: setup.system },
-    ...[...tokens].map(([label, n]) => ({
+    {
+      kind: "System",
+      label: "System prompt",
+      tokens: setup.system,
+      count: 1,
+      parts: [],
+    },
+    ...[...groups].map(([label, parts]) => ({
       kind: "Tools" as const,
       label,
-      tokens: n,
+      tokens: parts.reduce((n, p) => n + p.tokens, 0),
+      count: parts.length,
+      parts: biggest(parts),
     })),
   ];
 };
@@ -118,10 +145,18 @@ export const contextMap = (
               kind: "System",
               label: setup ? "Other" : "System & tools",
               tokens: rest,
+              count: 0,
+              parts: [],
             } as const,
           ]
         : []),
-      { kind: "Free", label: "Free", tokens: Math.max(window, total) - total },
+      {
+        kind: "Free",
+        label: "Free",
+        tokens: Math.max(window, total) - total,
+        count: 0,
+        parts: [],
+      },
     ],
   };
 };
