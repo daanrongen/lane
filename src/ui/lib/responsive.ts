@@ -56,7 +56,7 @@ export const responsive = (
   const chrome = px(282) + px(100);
   const rowHeight = clamp(
     Math.floor((size.height - chrome) / Math.max(lanes, 1)),
-    px(30),
+    px(42),
     px(88),
   );
 

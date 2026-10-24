@@ -11,8 +11,11 @@ export const ContextTile = ({ tile }: { tile: Tile }) => {
   const theme = useTheme();
   const { color, style } = cellLook(tile.cell.kind, theme);
   const pad = Math.round(r.dot);
-  const fitsName = tile.width > pad * 7 && tile.height > r.font.small * 2;
-  const fitsSize = tile.height > r.font.body + r.font.small * 2.4;
+  // A box can never be smaller than its padding, so only tiles with room pad.
+  const fitsName =
+    tile.width > pad * 8 && tile.height > pad * 2 + r.font.small * 1.8;
+  const fitsSize =
+    tile.height > pad * 2 + r.font.small * 1.8 + r.font.small * 1.8;
 
   return (
     <div
@@ -23,7 +26,7 @@ export const ContextTile = ({ tile }: { tile: Tile }) => {
         width: tile.width,
         height: tile.height,
         borderRadius: Math.min(6, Math.round(pad * 0.75)),
-        padding: pad,
+        padding: fitsName ? pad : 0,
         overflow: "hidden",
         ...style,
       }}

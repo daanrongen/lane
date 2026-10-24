@@ -6,7 +6,7 @@ describe("responsive", () => {
     const r = responsive({ width: 1400, height: 900 }, 5);
     expect(r.compact).toBe(false);
     expect(r.sidebar).toBeGreaterThanOrEqual(180);
-    expect(r.rowHeight).toBeGreaterThan(30);
+    expect(r.rowHeight).toBeGreaterThan(42);
     expect(r.barHeight).toBe(Math.round(r.rowHeight * 0.42));
   });
 
@@ -27,7 +27,7 @@ describe("responsive", () => {
 
   test("many lanes keep a readable minimum row height", () => {
     const r = responsive({ width: 1200, height: 600 }, 40);
-    expect(r.rowHeight).toBe(30);
+    expect(r.rowHeight).toBe(42);
   });
 
   test("a single lane does not stretch past the maximum", () => {
