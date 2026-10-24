@@ -93,7 +93,7 @@ export const makeDecoder = (cfg: DecoderConfig): Decoder => {
   const spans = new Map<string, boolean>(); // tool_use id -> closed
   const sources = new Map<string, Pick<Entry, "kind" | "label">>();
   let permission: string | undefined;
-  const shownQueue = "";
+  let shownQueue = "";
   // Prompts typed while the agent was busy; `shown` is false for hand-backs from sub-agents.
   let queued: { title: string; shown: boolean }[] = [];
   let announced = false;
@@ -261,6 +261,10 @@ export const makeDecoder = (cfg: DecoderConfig): Decoder => {
     const items = queued
       .filter((q) => q.shown)
       .map((q) => ({ title: q.title, status: "next" as const }));
+    // Hand-backs come and go unseen; only a change in what is shown is news.
+    const shown = items.map((i) => i.title).join("\n");
+    if (shown === shownQueue) return [];
+    shownQueue = shown;
     return [
       { _tag: "PlanReported", plan: { agentId, at, source: "queue", items } },
     ];
