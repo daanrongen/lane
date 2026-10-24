@@ -1,3 +1,4 @@
+import type { Card as Task } from "@/domain/board.ts";
 import type { Cell, CellKind, ContextMap } from "@/domain/context.ts";
 import type { AgentId } from "@/domain/ids.ts";
 import type { McpServer } from "@/domain/mcp.ts";
@@ -166,4 +167,24 @@ export const hostCard = (h: HostSummary): Card => ({
     ["last", duration(h.last)],
   ],
   list: h.via.map((v): Fact => ["via", v]),
+});
+
+const SOURCES: Record<Task["source"], string> = {
+  agent: "spawned agent",
+  now: "in progress right now",
+  todo: "task list",
+  plan: "approved plan",
+  queue: "queued prompt",
+  goal: "goal",
+};
+
+export const taskCard = (task: Task, owner: string): Card => ({
+  title: task.title,
+  subtitle: SOURCES[task.source],
+  facts: [
+    ["status", task.status],
+    ["owner", owner],
+    ["since", duration(task.since)],
+  ],
+  list: [],
 });

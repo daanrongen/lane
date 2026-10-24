@@ -1,17 +1,19 @@
 import { useEffect, useMemo, useState } from "react";
 import type { Asset } from "@/domain/assets.ts";
 import { makeAxis } from "@/domain/axis.ts";
+import { board } from "@/domain/board.ts";
 import { contextMap, contextUsed, laneWindow } from "@/domain/context.ts";
 import { mcpServers } from "@/domain/mcp.ts";
 import { hosts } from "@/domain/network.ts";
 import { timeline } from "@/domain/timeline.ts";
 import { Box, Row } from "@/ui/atoms/Box.tsx";
-import { MetricsContext } from "@/ui/lib/context.ts";
+import { MetricsContext, useTheme } from "@/ui/lib/context.ts";
 import { useNow } from "@/ui/lib/hooks/useNow.ts";
 import { useStore } from "@/ui/lib/hooks/useStore.ts";
 import { layout } from "@/ui/lib/layout.ts";
 import type { Keys, OpenedRun } from "@/ui/lib/ports.ts";
 import { responsive, type Size } from "@/ui/lib/responsive.ts";
+import { laneColor } from "@/ui/lib/theme.ts";
 import { AssetRows } from "@/ui/organisms/AssetRows.tsx";
 import { ContextMap } from "@/ui/organisms/ContextMap.tsx";
 import { Header } from "@/ui/organisms/Header.tsx";
@@ -19,6 +21,7 @@ import { Legend } from "@/ui/organisms/Legend.tsx";
 import { McpServers } from "@/ui/organisms/McpServers.tsx";
 import { NetworkHosts } from "@/ui/organisms/NetworkHosts.tsx";
 import { TimelineChart } from "@/ui/organisms/TimelineChart.tsx";
+import { WorkBoard } from "@/ui/organisms/WorkBoard.tsx";
 
 const IDLE = { maxIdle: 60, collapsedTo: 2 };
 
@@ -84,6 +87,26 @@ export const RunPage = ({
       lane ? laneWindow(lane) : 0,
     );
   }, [run.context, run.setups, lane]);
+  const work = useMemo(() => board(run), [run]);
+  const theme = useTheme();
+  const owners = useMemo(
+    () =>
+      new Map(
+        tl.lanes.map((l, i) => [
+          l.agent.id,
+          { name: l.agent.name, color: laneColor(theme, i) },
+        ]),
+      ),
+    [tl.lanes, theme],
+  );
+  // The context map and the board share the width; narrow panes stack them.
+  const total = r.labels + r.plotWidth;
+  const panelWidths = r.compact
+    ? { context: total, board: total }
+    : (() => {
+        const boardWidth = Math.round(total * 0.5);
+        return { context: total - boardWidth - r.pad, board: boardWidth };
+      })();
   const reached = useMemo(() => hosts(run.requests), [run.requests]);
   const servers = useMemo(
     () => mcpServers(run.setups, run.spans),
@@ -114,7 +137,27 @@ export const RunPage = ({
         <McpServers servers={servers} />
       </Row>
       <NetworkHosts hosts={reached} />
-      {lane ? <ContextMap map={map} agent={lane.agent.name} /> : null}
+      <Box
+        style={{
+          flexDirection: r.compact ? "column" : "row",
+          gap: r.pad,
+          alignItems: "flex-start",
+        }}
+      >
+        {lane ? (
+          <ContextMap
+            map={map}
+            agent={lane.agent.name}
+            width={panelWidths.context}
+          />
+        ) : null}
+        <WorkBoard
+          board={work}
+          owners={owners}
+          width={panelWidths.board}
+          height={r.contextHeight}
+        />
+      </Box>
       <AssetRows assets={assets} />
     </MetricsContext.Provider>
   );

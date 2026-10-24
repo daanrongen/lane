@@ -12,13 +12,14 @@ import { ContextTile } from "@/ui/molecules/ContextTile.tsx";
 export const ContextMap = ({
   map,
   agent,
+  width,
 }: {
   map: Breakdown;
   agent: string;
+  width: number;
 }) => {
   const r = useMetrics();
   const theme = useTheme();
-  const width = r.labels + r.plotWidth;
   const gap = Math.max(2, Math.round(r.dot / 3));
   const laid = useMemo(
     () => tiles(map.cells, width, r.contextHeight, gap),

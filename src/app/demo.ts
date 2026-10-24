@@ -92,6 +92,21 @@ const mcp = (
   ];
 };
 
+const plan = (
+  agentId: AgentId,
+  at: number,
+  source: "todo" | "plan" | "queue" | "goal",
+  items: [string, "next" | "doing" | "done"][],
+): RunEvent => ({
+  _tag: "PlanReported",
+  plan: {
+    agentId,
+    at,
+    source,
+    items: items.map(([title, status]) => ({ title, status })),
+  },
+});
+
 const request = (
   agentId: AgentId,
   at: number,
@@ -214,6 +229,18 @@ export const demoEvents: readonly RunEvent[] = [
       ],
     },
   },
+  plan(main, 1, "todo", [
+    ["Find where checkout drops", "doing"],
+    ["Compare with competitors", "next"],
+    ["Draft the report", "next"],
+  ]),
+  plan(main, 14.5, "todo", [
+    ["Find where checkout drops", "done"],
+    ["Compare with competitors", "doing"],
+    ["Draft the report", "next"],
+    ["Review with the team", "next"],
+  ]),
+  plan(main, 20, "queue", [["also check the mobile flow", "next"]]),
   request(researcher, 4.2, "web search", "WebSearch", "checkout drop causes"),
   request(
     researcher,
@@ -296,6 +323,17 @@ export const demoCodexEvents: readonly RunEvent[] = [
     "shell",
     "curl https://registry.npmjs.org/vite",
   ),
+  plan(codex, 1, "todo", [
+    ["Read the vite config", "doing"],
+    ["Patch the build", "next"],
+    ["Run the tests", "next"],
+  ]),
+  plan(codex, 12, "todo", [
+    ["Read the vite config", "done"],
+    ["Patch the build", "done"],
+    ["Run the tests", "doing"],
+  ]),
+  plan(codex, 12, "goal", [["Ship the portfolio redesign", "doing"]]),
   request(codex, 5.3, "web search", "web_search", "vite 7 config"),
   request(
     codex,
