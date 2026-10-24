@@ -52,8 +52,6 @@ export const fold = (run: Run, e: RunEvent): Run => {
       return { ...run, skills: [...run.skills, e.use] };
     case "ModeChanged":
       return { ...run, modes: [...run.modes, e.change] };
-    case "PlanReported":
-      return { ...run, plans: [...run.plans, e.plan] };
     case "RequestMade":
       return { ...run, requests: [...run.requests, e.request] };
     case "SetupReported":

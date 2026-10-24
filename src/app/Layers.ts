@@ -9,21 +9,26 @@ import {
   processAlive,
   SessionRepositoryFs,
 } from "@/adapters/claude/SessionRepositoryFs.ts";
+import { TaskRepositoryFs } from "@/adapters/claude/tasks.ts";
 import { codexAssets } from "@/adapters/codex/assets.ts";
 import { CodexHome } from "@/adapters/codex/CodexHome.ts";
 import { RunSourceCodex } from "@/adapters/codex/runs.ts";
 import { SessionRepositoryCodex } from "@/adapters/codex/sessions.ts";
+import { TaskRepositoryCodex } from "@/adapters/codex/tasks.ts";
 import { assetReaderMemory } from "@/adapters/memory/AssetReaderMemory.ts";
 import { RunSourceMemory } from "@/adapters/memory/RunSourceMemory.ts";
 import { SessionRepositoryMemory } from "@/adapters/memory/SessionRepositoryMemory.ts";
+import { TaskRepositoryMemory } from "@/adapters/memory/TaskRepositoryMemory.ts";
 import { ollamaAssets } from "@/adapters/ollama/assets.ts";
 import { OllamaHome } from "@/adapters/ollama/OllamaHome.ts";
 import {
   demoAssets,
   demoCodexEvents,
   demoCodexSession,
+  demoCodexTasks,
   demoEvents,
   demoSession,
+  demoTasks,
 } from "@/app/demo.ts";
 import { SessionsStoreLive } from "@/app/SessionsStore.ts";
 import { assetsOf } from "@/ports/Assets.ts";
@@ -36,6 +41,7 @@ const claude = harness(
   Layer.mergeAll(
     SessionRepositoryFs(processAlive),
     RunSourceFs(Schedule.spaced("500 millis")),
+    TaskRepositoryFs(Schedule.spaced("500 millis")),
   ).pipe(Layer.provide(ClaudeHome.default)),
 );
 
@@ -44,6 +50,7 @@ const codex = harness(
   Layer.mergeAll(
     SessionRepositoryCodex,
     RunSourceCodex(Schedule.spaced("500 millis")),
+    TaskRepositoryCodex(Schedule.spaced("500 millis")),
   ).pipe(Layer.provide(CodexHome.default)),
 );
 
@@ -66,6 +73,7 @@ const demoClaude = harness(
   Layer.mergeAll(
     SessionRepositoryMemory(() => [demoSession]),
     RunSourceMemory({ [demoSession.id]: demoEvents }),
+    TaskRepositoryMemory({ [demoSession.id]: demoTasks }),
   ),
 );
 
@@ -74,6 +82,7 @@ const demoCodex = harness(
   Layer.mergeAll(
     SessionRepositoryMemory(() => [demoCodexSession]),
     RunSourceMemory({ [demoCodexSession.id]: demoCodexEvents }),
+    TaskRepositoryMemory({ [demoCodexSession.id]: demoCodexTasks }),
   ),
 );
 

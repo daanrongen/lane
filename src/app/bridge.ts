@@ -45,6 +45,7 @@ export const makeUiPorts = async <E>(
     return {
       run: store(opened.run),
       status: store(opened.status),
+      tasks: store(opened.tasks),
       close: () => void Effect.runFork(Scope.close(scope, Exit.void)),
     };
   };

@@ -1,5 +1,6 @@
-import type { Board, Card } from "@/domain/board.ts";
+import type { Board } from "@/domain/board.ts";
 import type { AgentId } from "@/domain/ids.ts";
+import type { Task } from "@/domain/task.ts";
 import { Column, Row } from "@/ui/atoms/Box.tsx";
 import { Text } from "@/ui/atoms/Text.tsx";
 import { useMetrics, useTheme } from "@/ui/lib/context.ts";
@@ -25,7 +26,7 @@ const Lane = ({
   height,
 }: {
   title: string;
-  cards: readonly Card[];
+  cards: readonly Task[];
   owners: ReadonlyMap<AgentId, Owner>;
   width: number;
   height: number;
@@ -58,7 +59,7 @@ const Lane = ({
         const owner = owners.get(card.owner);
         return (
           <TaskCard
-            key={`${card.source}:${card.title}`}
+            key={card.id}
             task={card}
             owner={owner?.name ?? "agent"}
             color={owner?.color ?? theme.dim}
@@ -72,8 +73,8 @@ const Lane = ({
   );
 };
 
-// Done, doing, next: what the agents have finished, are working on, and have lined up.
-export const WorkBoard = ({
+// Done, doing, next: the tasks agents have finished, are working on, and have lined up.
+export const TaskBoard = ({
   board,
   owners,
   width,
@@ -91,7 +92,7 @@ export const WorkBoard = ({
   return (
     <Column gap={Math.round(r.pad / 2)} style={{ width }}>
       <Row justify="space-between">
-        <Text>Work</Text>
+        <Text>Tasks</Text>
         <Text tone="dim">
           {total ? `${board.done.length}/${total} done` : "nothing reported"}
         </Text>

@@ -2,6 +2,7 @@ import type { Asset } from "@/domain/assets.ts";
 import type { RunEvent } from "@/domain/events.ts";
 import { AgentId, SessionId, SpanId } from "@/domain/ids.ts";
 import type { Session } from "@/domain/session.ts";
+import type { Task } from "@/domain/task.ts";
 
 export const demoSession: Session = {
   harness: "claude",
@@ -111,21 +112,6 @@ const skill = (
   name: string,
   via: "tool" | "mention" = "tool",
 ): RunEvent => ({ _tag: "SkillUsed", use: { agentId, at, name, via } });
-
-const plan = (
-  agentId: AgentId,
-  at: number,
-  source: "todo" | "plan" | "queue" | "goal",
-  items: [string, "next" | "doing" | "done"][],
-): RunEvent => ({
-  _tag: "PlanReported",
-  plan: {
-    agentId,
-    at,
-    source,
-    items: items.map(([title, status]) => ({ title, status })),
-  },
-});
 
 const request = (
   agentId: AgentId,
@@ -257,18 +243,6 @@ export const demoEvents: readonly RunEvent[] = [
   skill(researcher, 6.2, "obsidian"),
   skill(analyst, 9.7, "mise"),
   turn(analyst, 7, "gpt-oss:20b", 900, 200),
-  plan(main, 1, "todo", [
-    ["Find where checkout drops", "doing"],
-    ["Compare with competitors", "next"],
-    ["Draft the report", "next"],
-  ]),
-  plan(main, 14.5, "todo", [
-    ["Find where checkout drops", "done"],
-    ["Compare with competitors", "doing"],
-    ["Draft the report", "next"],
-    ["Review with the team", "next"],
-  ]),
-  plan(main, 20, "queue", [["also check the mobile flow", "next"]]),
   request(researcher, 4.2, "web search", "WebSearch", "checkout drop causes"),
   request(
     researcher,
@@ -356,17 +330,6 @@ export const demoCodexEvents: readonly RunEvent[] = [
   mode(codex, 0, "effort", "high"),
   mode(codex, 9, "approval", "never"),
   skill(codex, 1.5, "container", "mention"),
-  plan(codex, 1, "todo", [
-    ["Read the vite config", "doing"],
-    ["Patch the build", "next"],
-    ["Run the tests", "next"],
-  ]),
-  plan(codex, 12, "todo", [
-    ["Read the vite config", "done"],
-    ["Patch the build", "done"],
-    ["Run the tests", "doing"],
-  ]),
-  plan(codex, 12, "goal", [["Ship the portfolio redesign", "doing"]]),
   request(codex, 5.3, "web search", "web_search", "vite 7 config"),
   request(
     codex,
@@ -444,4 +407,35 @@ export const demoAssets: readonly Asset[] = [
     name: "nomic-embed-text:latest",
     bytes: 0.27 * GB,
   },
+];
+
+const task = (
+  source: Task["source"],
+  owner: AgentId,
+  title: string,
+  status: Task["status"],
+  since: number,
+): Task => ({
+  id: `${source}:${owner}:${title}`,
+  title,
+  status,
+  source,
+  owner,
+  since,
+});
+
+// The orchestrator's task list as it stood at the end of the run.
+export const demoTasks: readonly Task[] = [
+  task("todo", main, "Find where checkout drops", "done", 14.5),
+  task("todo", main, "Compare with competitors", "doing", 14.5),
+  task("todo", main, "Draft the report", "next", 1),
+  task("todo", main, "Review with the team", "next", 14.5),
+  task("queue", main, "also check the mobile flow", "next", 20),
+];
+
+export const demoCodexTasks: readonly Task[] = [
+  task("todo", codex, "Read the vite config", "done", 12),
+  task("todo", codex, "Patch the build", "done", 12),
+  task("todo", codex, "Run the tests", "doing", 12),
+  task("goal", codex, "Ship the portfolio redesign", "doing", 12),
 ];

@@ -3,7 +3,6 @@ import type {
   Agent,
   Entry,
   ModeChange,
-  Plan,
   Request,
   Setup,
   SkillUse,
@@ -41,5 +40,4 @@ export type RunEvent =
   | { readonly _tag: "SetupReported"; readonly setup: Setup }
   | { readonly _tag: "RequestMade"; readonly request: Request }
   | { readonly _tag: "SkillUsed"; readonly use: SkillUse }
-  | { readonly _tag: "ModeChanged"; readonly change: ModeChange }
-  | { readonly _tag: "PlanReported"; readonly plan: Plan };
+  | { readonly _tag: "ModeChanged"; readonly change: ModeChange };

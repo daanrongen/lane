@@ -1,4 +1,4 @@
-import type { Card as Task } from "@/domain/board.ts";
+import type { Task } from "@/domain/task.ts";
 import { Dot } from "@/ui/atoms/Dot.tsx";
 import { Text } from "@/ui/atoms/Text.tsx";
 import { taskCard } from "@/ui/lib/cards.ts";

@@ -1,4 +1,3 @@
-import type { Card as Task } from "@/domain/board.ts";
 import type { Cell, CellKind, ContextMap } from "@/domain/context.ts";
 import type { AgentId } from "@/domain/ids.ts";
 import type { McpServer } from "@/domain/mcp.ts";
@@ -8,6 +7,7 @@ import type { PostureSpan } from "@/domain/posture.ts";
 import { type PermissionRule, ruleFor } from "@/domain/rules.ts";
 import type { Request, SkillUse, Span } from "@/domain/run.ts";
 import type { SkillSummary } from "@/domain/skills.ts";
+import type { Task } from "@/domain/task.ts";
 import type { Lane } from "@/domain/timeline.ts";
 import {
   clip,

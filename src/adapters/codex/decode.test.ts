@@ -140,18 +140,12 @@ describe("makeCodexDecoder", () => {
     ]);
   });
 
-  test("update_plan is a task list, a named skill is a mention, the provider comes from the meta", () => {
+  test("a named skill is a mention, the provider comes from the meta", () => {
     const { run } = decode([
       {
         ...meta(0),
         payload: { ...(meta(0).payload as object), model_provider: "ollama" },
       },
-      call(1, "c1", "update_plan", {
-        plan: [
-          { step: "a", status: "completed" },
-          { step: "b", status: "pending" },
-        ],
-      }),
       {
         timestamp: "2026-01-01T00:00:02Z",
         type: "event_msg",
@@ -165,7 +159,6 @@ describe("makeCodexDecoder", () => {
       },
       model(3),
     ]);
-    expect(run.plans[0]?.items.map((i) => i.status)).toEqual(["done", "next"]);
     expect(run.skills[0]).toMatchObject({ name: "container", via: "mention" });
     expect(run.turns.at(-1)?.provider).toBe("ollama");
   });

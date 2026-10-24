@@ -1,5 +1,4 @@
 import {
-  Clock,
   Effect,
   FileSystem,
   Layer,
@@ -9,17 +8,18 @@ import {
 } from "effect";
 import { CodexHome } from "@/adapters/codex/CodexHome.ts";
 import { makeCodexDecoder } from "@/adapters/codex/decode.ts";
+import { locateRollout } from "@/adapters/codex/locate.ts";
 import { codexState } from "@/adapters/codex/state.ts";
-import { taskEvents } from "@/adapters/codex/tasks.ts";
-import { parseJson, rec, str } from "@/adapters/shared/json.ts";
-import { concat, tail } from "@/adapters/shared/tail.ts";
+import { parseJson } from "@/adapters/shared/json.ts";
+import { startOf } from "@/adapters/shared/origin.ts";
+import { tail } from "@/adapters/shared/tail.ts";
 import type { RunEvent } from "@/domain/events.ts";
 import { AgentId, SessionId } from "@/domain/ids.ts";
 import { RunSource } from "@/ports/RunSource.ts";
 import { SourceError } from "@/ports/SourceError.ts";
 
 const ROOT = AgentId("main");
-const text = new TextDecoder();
+const _text = new TextDecoder();
 
 // `poll` decides the mode: Schedule.once reads a snapshot, a spaced schedule follows live.
 export const RunSourceCodex = (poll: Schedule.Schedule<unknown>) =>
@@ -28,32 +28,7 @@ export const RunSourceCodex = (poll: Schedule.Schedule<unknown>) =>
     Effect.gen(function* () {
       const fs = yield* FileSystem.FileSystem;
       const home = yield* CodexHome;
-      const dir = `${home}/sessions`;
-
-      const locate = (id: SessionId) =>
-        fs.readDirectory(dir, { recursive: true }).pipe(
-          Effect.map((files) => files.find((f) => f.endsWith(`-${id}.jsonl`))),
-          Effect.flatMap((file) =>
-            file
-              ? Effect.succeed(`${dir}/${file}`)
-              : Effect.fail(
-                  new SourceError({ message: `no rollout for ${id}` }),
-                ),
-          ),
-        );
-
-      // Run start is the first timestamp in the rollout.
-      const startOf = (file: string) =>
-        Effect.gen(function* () {
-          const head = concat(
-            yield* Stream.runCollect(fs.stream(file, { bytesToRead: 32_768 })),
-          );
-          for (const line of text.decode(head).split("\n")) {
-            const ts = Date.parse(str(rec(parseJson(line))?.timestamp) ?? "");
-            if (!Number.isNaN(ts)) return ts;
-          }
-          return yield* Clock.currentTimeMillis;
-        });
+      const _dir = `${home}/sessions`;
 
       const state = yield* codexState.pipe(
         Effect.provideService(FileSystem.FileSystem, fs),
@@ -81,33 +56,6 @@ export const RunSourceCodex = (poll: Schedule.Schedule<unknown>) =>
         );
       };
 
-      // Goals and the queue live in SQLite; a snapshot is news only when it changes.
-      const tasks = (id: SessionId, origin: number) => {
-        let last = "";
-        return Stream.fromSchedule(poll).pipe(
-          Stream.mapEffect(() =>
-            Effect.gen(function* () {
-              const [goals, queue] = yield* Effect.all([
-                state.goals(id),
-                state.queue(id),
-              ]);
-              const now = yield* Clock.currentTimeMillis;
-              const events = taskEvents(
-                ROOT,
-                (now - origin) / 1000,
-                goals,
-                queue,
-              );
-              const signature = JSON.stringify([goals, queue]);
-              if (signature === last) return [];
-              last = signature;
-              return events;
-            }),
-          ),
-          Stream.flattenIterable,
-        );
-      };
-
       // Threads the root spawned run as lanes of their own.
       const children = (id: SessionId, origin: number) =>
         Stream.fromSchedule(poll).pipe(
@@ -119,7 +67,7 @@ export const RunSourceCodex = (poll: Schedule.Schedule<unknown>) =>
               seen.has(child.id) ? [seen, []] : [seen.add(child.id), [child]],
           ),
           Stream.mapEffect((child) =>
-            locate(SessionId(child.id)).pipe(
+            locateRollout(fs, home, SessionId(child.id)).pipe(
               Effect.map((file) => ({ child, file })),
               Effect.option,
             ),
@@ -140,18 +88,14 @@ export const RunSourceCodex = (poll: Schedule.Schedule<unknown>) =>
       const events = (id: SessionId) =>
         Stream.unwrap(
           Effect.gen(function* () {
-            const file = yield* locate(id);
-            const origin = yield* startOf(file);
+            const file = yield* locateRollout(fs, home, id);
+            const origin = yield* startOf(fs, file);
             return Stream.concat(
               Stream.fromIterable<RunEvent>([
                 { _tag: "RunStarted", startedAt: origin },
               ]),
               Stream.mergeAll(
-                [
-                  rollout(file, origin, { id: ROOT }),
-                  tasks(id, origin),
-                  children(id, origin),
-                ],
+                [rollout(file, origin, { id: ROOT }), children(id, origin)],
                 { concurrency: "unbounded" },
               ),
             );

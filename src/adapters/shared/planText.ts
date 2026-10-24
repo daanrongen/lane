@@ -1,4 +1,4 @@
-import type { TaskItem, TaskStatus } from "@/domain/run.ts";
+import type { TaskItem, TaskStatus } from "@/domain/task.ts";
 
 const MAX_ITEMS = 12;
 const clip = (s: string) => (s.length > 70 ? `${s.slice(0, 69)}…` : s);

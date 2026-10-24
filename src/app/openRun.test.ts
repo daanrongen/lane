@@ -2,7 +2,8 @@ import { describe, expect, test } from "bun:test";
 import { Effect, Layer, type Scope, SubscriptionRef } from "effect";
 import { RunSourceMemory } from "@/adapters/memory/RunSourceMemory.ts";
 import { SessionRepositoryMemory } from "@/adapters/memory/SessionRepositoryMemory.ts";
-import { demoEvents, demoSession } from "@/app/demo.ts";
+import { TaskRepositoryMemory } from "@/adapters/memory/TaskRepositoryMemory.ts";
+import { demoEvents, demoSession, demoTasks } from "@/app/demo.ts";
 import { openRun } from "@/app/openRun.ts";
 import { until } from "@/app/testing.ts";
 import { foldAll } from "@/domain/fold.ts";
@@ -14,9 +15,10 @@ const id = demoSession.id;
 const source = harnessesOf(
   harness(
     "claude",
-    Layer.merge(
+    Layer.mergeAll(
       SessionRepositoryMemory(() => [demoSession]),
       RunSourceMemory({ [id]: demoEvents }),
+      TaskRepositoryMemory({ [id]: demoTasks }),
     ),
   ),
 );
@@ -34,6 +36,11 @@ describe("openRun", () => {
         expect(yield* SubscriptionRef.get(open.run)).toEqual(
           foldAll(emptyRun(id, 0), demoEvents),
         );
+        const tasks = yield* until(
+          SubscriptionRef.get(open.tasks),
+          (t) => t.length > 0,
+        );
+        expect(tasks).toEqual(demoTasks);
       }),
     ));
 

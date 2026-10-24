@@ -368,46 +368,6 @@ describe("how the work is steered", () => {
     ]);
   });
 
-  test("an approved plan, todos and the prompt queue become task lists", () => {
-    const run = fold([
-      assistant(1, "m1", [
-        toolUse("t1", "ExitPlanMode", { plan: "## 1. Build\n## 2. Ship" }),
-        toolUse("t2", "TodoWrite", {
-          todos: [
-            { content: "write", status: "completed" },
-            { content: "test", status: "in_progress" },
-          ],
-        }),
-      ]),
-      {
-        type: "queue-operation",
-        operation: "enqueue",
-        content: "then do x",
-        timestamp: iso(3),
-      },
-      {
-        type: "queue-operation",
-        operation: "enqueue",
-        content: "<agent-message>",
-        timestamp: iso(4),
-      },
-    ]);
-    const by = (source: string) =>
-      run.plans
-        .filter((p) => p.source === source)
-        .at(-1)
-        ?.items.map((i) => [i.title, i.status]);
-    expect(by("plan")).toEqual([
-      ["Build", "next"],
-      ["Ship", "next"],
-    ]);
-    expect(by("todo")).toEqual([
-      ["write", "done"],
-      ["test", "doing"],
-    ]);
-    expect(by("queue")).toEqual([["then do x", "next"]]);
-  });
-
   test("a turn knows its provider", () => {
     const run = fold([
       {

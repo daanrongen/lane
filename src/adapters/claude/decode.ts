@@ -1,6 +1,5 @@
 import type { Decoder } from "@/adapters/shared/decoder.ts";
 import { arr, type Json, num, rec, str } from "@/adapters/shared/json.ts";
-import { planItems, statusOf } from "@/adapters/shared/planText.ts";
 import { reasonOf } from "@/adapters/shared/reason.ts";
 import {
   fetchTarget,
@@ -94,9 +93,6 @@ export const makeDecoder = (cfg: DecoderConfig): Decoder => {
   const spans = new Map<string, boolean>(); // tool_use id -> closed
   const sources = new Map<string, Pick<Entry, "kind" | "label">>();
   let permission: string | undefined;
-  let shownQueue = "";
-  // Prompts typed while the agent was busy; `shown` is false for hand-backs from sub-agents.
-  let queued: { title: string; shown: boolean }[] = [];
   let announced = false;
   let boundary: number | undefined;
   let last = 0;
@@ -197,44 +193,16 @@ export const makeDecoder = (cfg: DecoderConfig): Decoder => {
     return [...entry, ...resolve(id, false)];
   };
 
-  // What a tool call says about the work: skills used, plans and task lists.
+  // The tool calls that name a skill.
   const intents = (
     name: string,
     input: Json | undefined,
     at: number,
   ): RunEvent[] => {
-    const plan = (
-      source: "plan" | "todo",
-      items: readonly { title: string; status: "next" | "doing" | "done" }[],
-    ): RunEvent[] =>
-      items.length
-        ? [{ _tag: "PlanReported", plan: { agentId, at, source, items } }]
-        : [];
-    switch (name) {
-      case "Skill": {
-        const skill = str(input?.skill);
-        return skill
-          ? [
-              {
-                _tag: "SkillUsed",
-                use: { agentId, at, name: skill, via: "tool" },
-              },
-            ]
-          : [];
-      }
-      case "ExitPlanMode":
-        return plan("plan", planItems(str(input?.plan) ?? ""));
-      case "TodoWrite":
-        return plan(
-          "todo",
-          arr(input?.todos).flatMap((t) => {
-            const title = str(rec(t)?.content);
-            return title ? [{ title, status: statusOf(rec(t)?.status) }] : [];
-          }),
-        );
-      default:
-        return [];
-    }
+    const skill = name === "Skill" ? str(input?.skill) : undefined;
+    return skill
+      ? [{ _tag: "SkillUsed", use: { agentId, at, name: skill, via: "tool" } }]
+      : [];
   };
 
   const modeChanged = (value: string | undefined): RunEvent[] => {
@@ -245,29 +213,6 @@ export const makeDecoder = (cfg: DecoderConfig): Decoder => {
         _tag: "ModeChanged",
         change: { agentId, at: last, kind: "permission", value },
       },
-    ];
-  };
-
-  // The queue as it stands after one operation.
-  const queueOp = (line: Json, at: number): RunEvent[] => {
-    const op = str(line.operation);
-    const content = str(line.content) ?? "";
-    if (op === "enqueue") {
-      const title = content.split("\n")[0]?.slice(0, 70) ?? "";
-      queued = [...queued, { title, shown: !content.startsWith("<") }];
-    } else if (op === "dequeue") queued = queued.slice(1);
-    else if (op === "remove") queued = queued.slice(0, -1);
-    else if (op === "popAll") queued = [];
-    else return [];
-    const items = queued
-      .filter((q) => q.shown)
-      .map((q) => ({ title: q.title, status: "next" as const }));
-    // Hand-backs come and go unseen; only a change in what is shown is news.
-    const shown = items.map((i) => i.title).join("\n");
-    if (shown === shownQueue) return [];
-    shownQueue = shown;
-    return [
-      { _tag: "PlanReported", plan: { agentId, at, source: "queue", items } },
     ];
   };
 
@@ -407,7 +352,6 @@ export const makeDecoder = (cfg: DecoderConfig): Decoder => {
           ? [{ _tag: "ContextCompacted", agentId, at }]
           : [];
       }
-      if (type === "queue-operation") return queueOp(line, at);
       if (type === "attachment") {
         const attachment = rec(line.attachment);
         return [...setup(attachment, at), ...reminder(attachment, at)];

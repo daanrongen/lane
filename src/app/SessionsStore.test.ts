@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { Effect, Layer, Schedule, SubscriptionRef } from "effect";
 import { RunSourceMemory } from "@/adapters/memory/RunSourceMemory.ts";
 import { SessionRepositoryMemory } from "@/adapters/memory/SessionRepositoryMemory.ts";
+import { TaskRepositoryMemory } from "@/adapters/memory/TaskRepositoryMemory.ts";
 import { SessionsStore, SessionsStoreLive } from "@/app/SessionsStore.ts";
 import { until } from "@/app/testing.ts";
 import { SessionId } from "@/domain/ids.ts";
@@ -30,7 +31,14 @@ const run = <A, E>(
         SessionsStoreLive(poll).pipe(
           Layer.provide(
             harnessesOf(
-              harness("claude", Layer.merge(catalog, RunSourceMemory({}))),
+              harness(
+                "claude",
+                Layer.mergeAll(
+                  catalog,
+                  RunSourceMemory({}),
+                  TaskRepositoryMemory({}),
+                ),
+              ),
             ),
           ),
         ),
@@ -84,9 +92,10 @@ describe("SessionsStore across harnesses", () => {
     const of = (s: Session) =>
       harness(
         s.harness,
-        Layer.merge(
+        Layer.mergeAll(
           SessionRepositoryMemory(() => [s]),
           RunSourceMemory({}),
+          TaskRepositoryMemory({}),
         ),
       );
     return Effect.runPromise(

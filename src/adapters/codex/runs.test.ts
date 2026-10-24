@@ -80,7 +80,7 @@ describe("RunSourceCodex", () => {
       }),
     ));
 
-  test("goals and queued prompts from SQLite become task lists, spawned threads become lanes", () =>
+  test("spawned threads become lanes", () =>
     runFs(
       Effect.gen(function* () {
         const fs = yield* FileSystem.FileSystem;
@@ -102,22 +102,6 @@ describe("RunSourceCodex", () => {
           ]),
         );
 
-        const goals = new Database(`${home}/goals_1.sqlite`);
-        goals.run(
-          "create table thread_goals (thread_id text, objective text, status text, created_at_ms integer)",
-        );
-        goals.run(
-          `insert into thread_goals values ('${SID}', 'ship it', 'active', 1)`,
-        );
-        goals.close();
-        const queue = new Database(`${home}/queue_1.sqlite`);
-        queue.run(
-          "create table queued_items (thread_id text, payload_json text, queue_order integer)",
-        );
-        queue.run(
-          `insert into queued_items values ('${SID}', '{"text":"then deploy"}', 1)`,
-        );
-        queue.close();
         const state = new Database(`${home}/state_5.sqlite`);
         state.run(
           "create table thread_spawn_edges (parent_thread_id text, child_thread_id text, status text)",
@@ -137,12 +121,6 @@ describe("RunSourceCodex", () => {
           ),
         );
         const run = foldAll(emptyRun(SID, 0), events);
-        const by = (source: string) =>
-          run.plans
-            .find((p) => p.source === source)
-            ?.items.map((i) => [i.title, i.status]);
-        expect(by("goal")).toEqual([["ship it", "doing"]]);
-        expect(by("queue")).toEqual([["then deploy", "next"]]);
         expect(
           timeline(run, 0).lanes.map((l) => [String(l.agent.id), l.depth]),
         ).toEqual([

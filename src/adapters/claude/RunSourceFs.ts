@@ -1,16 +1,11 @@
-import {
-  Clock,
-  Effect,
-  FileSystem,
-  Layer,
-  type Schedule,
-  Stream,
-} from "effect";
+import { Effect, FileSystem, Layer, type Schedule, Stream } from "effect";
 import { ClaudeHome } from "@/adapters/claude/ClaudeHome.ts";
 import { makeDecoder, spawnRegistry } from "@/adapters/claude/decode.ts";
+import { locateTranscript } from "@/adapters/claude/locate.ts";
 import type { Decoder } from "@/adapters/shared/decoder.ts";
-import { parseJson, rec, str } from "@/adapters/shared/json.ts";
-import { concat, tail } from "@/adapters/shared/tail.ts";
+import { parseJson } from "@/adapters/shared/json.ts";
+import { startOf } from "@/adapters/shared/origin.ts";
+import { tail } from "@/adapters/shared/tail.ts";
 import type { RunEvent } from "@/domain/events.ts";
 import { AgentId, type SessionId } from "@/domain/ids.ts";
 import { RunSource } from "@/ports/RunSource.ts";
@@ -18,7 +13,7 @@ import { SourceError } from "@/ports/SourceError.ts";
 
 const ROOT = AgentId("main");
 const META = ".meta.json";
-const text = new TextDecoder();
+const _text = new TextDecoder();
 
 const toSourceError = (cause: unknown) =>
   cause instanceof SourceError
@@ -33,38 +28,11 @@ export const RunSourceFs = (poll: Schedule.Schedule<unknown>) =>
       const fs = yield* FileSystem.FileSystem;
       const home = yield* ClaudeHome;
 
-      const locate = (id: SessionId) =>
-        Effect.gen(function* () {
-          const projects = `${home}/projects`;
-          for (const slug of yield* fs.readDirectory(projects)) {
-            const file = `${projects}/${slug}/${id}.jsonl`;
-            if (yield* fs.exists(file)) {
-              return { file, subagents: `${projects}/${slug}/${id}/subagents` };
-            }
-          }
-          return yield* Effect.fail(
-            new SourceError({ message: `no transcript for ${id}` }),
-          );
-        });
-
-      // Run start is the first timestamp in the root transcript.
-      const startOf = (file: string) =>
-        Effect.gen(function* () {
-          const head = concat(
-            yield* Stream.runCollect(fs.stream(file, { bytesToRead: 32_768 })),
-          );
-          for (const line of text.decode(head).split("\n")) {
-            const ts = Date.parse(str(rec(parseJson(line))?.timestamp) ?? "");
-            if (!Number.isNaN(ts)) return ts;
-          }
-          return yield* Clock.currentTimeMillis;
-        });
-
       const events = (id: SessionId) =>
         Stream.unwrap(
           Effect.gen(function* () {
-            const { file, subagents } = yield* locate(id);
-            const origin = yield* startOf(file);
+            const { file, subagents } = yield* locateTranscript(fs, home, id);
+            const origin = yield* startOf(fs, file);
             const registry = spawnRegistry();
 
             const metas = fs.readDirectory(subagents).pipe(

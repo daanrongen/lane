@@ -1,6 +1,7 @@
 import type { Asset } from "@/domain/assets.ts";
 import type { Run } from "@/domain/run.ts";
 import type { Session } from "@/domain/session.ts";
+import type { Task } from "@/domain/task.ts";
 
 export interface Store<A> {
   readonly get: () => A;
@@ -12,6 +13,7 @@ export type RunStatus = "reading" | "ended" | "failed";
 export interface OpenedRun {
   readonly run: Store<Run>;
   readonly status: Store<RunStatus>;
+  readonly tasks: Store<readonly Task[]>;
   readonly close: () => void;
 }
 

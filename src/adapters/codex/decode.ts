@@ -1,6 +1,5 @@
 import type { Decoder } from "@/adapters/shared/decoder.ts";
 import { arr, type Json, num, rec, str } from "@/adapters/shared/json.ts";
-import { statusOf } from "@/adapters/shared/planText.ts";
 import { reasonOf } from "@/adapters/shared/reason.ts";
 import { requestEvents, SEARCH_HOST } from "@/adapters/shared/requests.ts";
 import { sizeOf, tokensOf } from "@/adapters/shared/sizing.ts";
@@ -177,11 +176,6 @@ export const makeCodexDecoder = (cfg: CodexConfig): Decoder => {
       }
       case "function_call": {
         const name = str(p.name) ?? "tool";
-        if (name === "update_plan")
-          return [
-            ...planEvents(p, at),
-            ...call(p, name, p.arguments, name, at),
-          ];
         return call(
           p,
           name,
@@ -226,17 +220,6 @@ export const makeCodexDecoder = (cfg: CodexConfig): Decoder => {
         { _tag: "ModeChanged", change: { agentId, at, kind, value } } as const,
       ];
     });
-  };
-
-  // `update_plan` carries the agent's whole plan each time.
-  const planEvents = (p: Json, at: number): RunEvent[] => {
-    const items = arr(parseArgs(p.arguments)?.plan).flatMap((step) => {
-      const title = str(rec(step)?.step);
-      return title ? [{ title, status: statusOf(rec(step)?.status) }] : [];
-    });
-    return items.length
-      ? [{ _tag: "PlanReported", plan: { agentId, at, source: "todo", items } }]
-      : [];
   };
 
   // A skill the user named in their message.

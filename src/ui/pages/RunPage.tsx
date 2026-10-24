@@ -22,9 +22,9 @@ import { Header } from "@/ui/organisms/Header.tsx";
 import { Legend } from "@/ui/organisms/Legend.tsx";
 import { McpServers } from "@/ui/organisms/McpServers.tsx";
 import { NetworkHosts } from "@/ui/organisms/NetworkHosts.tsx";
+import { TaskBoard } from "@/ui/organisms/TaskBoard.tsx";
 import { TimelineChart } from "@/ui/organisms/TimelineChart.tsx";
 import { UsageRow } from "@/ui/organisms/UsageRow.tsx";
-import { WorkBoard } from "@/ui/organisms/WorkBoard.tsx";
 
 const IDLE = { maxIdle: 60, collapsedTo: 2 };
 
@@ -90,7 +90,8 @@ export const RunPage = ({
       lane ? laneWindow(lane) : 0,
     );
   }, [run.context, run.setups, lane]);
-  const work = useMemo(() => board(run), [run]);
+  const lists = useStore(opened.tasks);
+  const work = useMemo(() => board(run, lists), [run, lists]);
   const theme = useTheme();
   const owners = useMemo(
     () =>
@@ -165,7 +166,7 @@ export const RunPage = ({
               width={panelWidths.context}
             />
           ) : null}
-          <WorkBoard
+          <TaskBoard
             board={work}
             owners={owners}
             width={panelWidths.board}

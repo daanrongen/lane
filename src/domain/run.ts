@@ -113,21 +113,6 @@ export interface ModeChange {
   readonly value: string;
 }
 
-export type TaskStatus = "next" | "doing" | "done";
-
-export interface TaskItem {
-  readonly title: string;
-  readonly status: TaskStatus;
-}
-
-// One snapshot of a task list; a later one from the same source replaces it.
-export interface Plan {
-  readonly agentId: AgentId;
-  readonly at: number;
-  readonly source: "todo" | "plan" | "queue" | "goal";
-  readonly items: readonly TaskItem[];
-}
-
 export interface Tool {
   readonly name: string;
   readonly tokens: number;
@@ -155,7 +140,6 @@ export interface Run {
   readonly requests: readonly Request[];
   readonly skills: readonly SkillUse[];
   readonly modes: readonly ModeChange[];
-  readonly plans: readonly Plan[];
 }
 
 export const emptyRun = (sessionId: SessionId, startedAt: number): Run => ({
@@ -171,5 +155,4 @@ export const emptyRun = (sessionId: SessionId, startedAt: number): Run => ({
   requests: [],
   skills: [],
   modes: [],
-  plans: [],
 });
