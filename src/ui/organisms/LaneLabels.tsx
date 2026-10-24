@@ -8,7 +8,7 @@ export const LaneLabels = ({ rows }: { rows: readonly LaneRow[] }) => {
   const r = useMetrics();
   const theme = useTheme();
   return (
-    <Column style={{ width: r.labels, flexShrink: 0 }}>
+    <Column style={{ width: r.labels, flexShrink: 0, paddingRight: r.dot }}>
       {rows.map((row, i) => (
         <LaneLabel
           key={row.lane.agent.id}

@@ -23,7 +23,7 @@ export const LaneLabel = ({ lane, color }: { lane: Lane; color: string }) => {
     <Hover
       card={() => laneCard(lane, used, laneWindow(lane))}
       accent={color}
-      box={{ height: r.rowHeight }}
+      box={{ height: r.rowHeight, width: "100%" }}
       style={{
         height: "100%",
         flexDirection: "row",
@@ -34,7 +34,7 @@ export const LaneLabel = ({ lane, color }: { lane: Lane; color: string }) => {
       }}
     >
       <Dot color={color} faded={lane.finished} />
-      <Column>
+      <Column style={{ minWidth: 0, flexShrink: 1, overflow: "hidden" }}>
         <Text>{lane.agent.name}</Text>
         {detail ? (
           <Text size="small" tone="dim">
