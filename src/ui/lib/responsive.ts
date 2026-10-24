@@ -24,48 +24,29 @@ export interface Responsive {
   };
 }
 
-const BASE: Size = { width: 1100, height: 640 };
+const BASE = { width: 1100 };
 const clamp = (n: number, lo: number, hi: number) =>
   Math.min(hi, Math.max(lo, n));
 
 // Text never shrinks below its baseline; large panes scale it up, `zoom` adjusts by hand.
+// Height never resizes a component: short windows scroll instead.
 export const responsive = (
   size: Size,
-  lanes: number,
   zoom = 1,
   withSidebar = true,
 ): Responsive => {
-  const u =
-    clamp(
-      Math.min(size.width / BASE.width, size.height / BASE.height),
-      1,
-      1.5,
-    ) * zoom;
+  const u = clamp(size.width / BASE.width, 1, 1.5) * zoom;
   const px = (n: number) => Math.round(n * u);
 
   const compact = size.width < px(820);
   const sidebarShown = withSidebar && !compact;
-  const pad = px(16);
+  const pad = px(12);
   const sidebar = !sidebarShown
     ? 0
     : clamp(Math.round(size.width * 0.16), px(150), px(260));
-  const inner = size.width - sidebar - pad * (sidebarShown ? 3 : 2);
+  // Every section pads both sides, the sidebar included.
+  const inner = size.width - sidebar - pad * (sidebarShown ? 4 : 2);
   const labels = clamp(Math.round(inner * 0.16), px(160), px(240));
-
-  // Header, axis labels and footer take a fixed share; rows split the rest.
-  const chrome = px(282) + px(100) + px(48) + px(18);
-  const rowHeight = clamp(
-    Math.floor((size.height - chrome) / Math.max(lanes, 1)),
-    px(36),
-    px(52),
-  );
-
-  // The context map takes some of the height the lanes leave, but stays small.
-  const contextHeight = clamp(
-    size.height - chrome - rowHeight * lanes + px(100),
-    px(90),
-    px(130),
-  );
 
   return {
     unit: u,
@@ -74,9 +55,9 @@ export const responsive = (
     sidebar,
     labels,
     plotWidth: Math.max(160, inner - labels),
-    rowHeight,
-    barHeight: Math.max(10, Math.round(rowHeight * 0.5)),
-    contextHeight,
+    rowHeight: px(44),
+    barHeight: px(22),
+    contextHeight: px(130),
     dot: px(8),
     tickEvery: px(90),
     charWidth: px(11) * 0.6,

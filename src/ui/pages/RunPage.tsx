@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { type ReactNode, useEffect, useMemo, useState } from "react";
 import type { Asset } from "@/domain/assets.ts";
 import { makeAxis } from "@/domain/axis.ts";
 import { board } from "@/domain/board.ts";
@@ -25,10 +25,11 @@ import { NetworkHosts } from "@/ui/organisms/NetworkHosts.tsx";
 import { TaskBoard } from "@/ui/organisms/TaskBoard.tsx";
 import { TimelineChart } from "@/ui/organisms/TimelineChart.tsx";
 import { UsageRow } from "@/ui/organisms/UsageRow.tsx";
+import { PaneTemplate } from "@/ui/templates/PaneTemplate.tsx";
 
 const IDLE = { maxIdle: 60, collapsedTo: 2 };
 
-// One session's run: header over a scrollable timeline chart.
+// One session's run: a fixed header, a scrolling body, a fixed footer.
 export const RunPage = ({
   opened,
   title,
@@ -39,6 +40,7 @@ export const RunPage = ({
   zoom,
   keys,
   sidebar,
+  footer,
 }: {
   opened: OpenedRun;
   title: string;
@@ -49,6 +51,7 @@ export const RunPage = ({
   zoom: number;
   keys: Keys;
   sidebar: boolean;
+  footer: ReactNode;
 }) => {
   const run = useStore(opened.run);
   const status = useStore(opened.status);
@@ -56,7 +59,7 @@ export const RunPage = ({
   const elapsed = Math.floor((now - run.startedAt) / 1000);
 
   const tl = useMemo(() => timeline(run, elapsed), [run, elapsed]);
-  const r = responsive(size, tl.lanes.length, zoom, sidebar);
+  const r = responsive(size, zoom, sidebar);
   const axis = useMemo(() => makeAxis(tl, IDLE), [tl]);
   const frame = useMemo(
     () =>
@@ -128,51 +131,43 @@ export const RunPage = ({
   return (
     <AssetsContext.Provider value={assets}>
       <MetricsContext.Provider value={r}>
-        <Header
-          title={title}
-          subtitle={cwd}
-          harness={harness}
-          status={status}
-          timeline={tl}
-        />
-        <Box
-          style={{
-            flexDirection: "column",
-            flexGrow: 1,
-            minHeight: 0,
-            overflowY: "scroll",
-          }}
+        <PaneTemplate
+          header={
+            <Header
+              title={title}
+              subtitle={cwd}
+              harness={harness}
+              status={status}
+              timeline={tl}
+            />
+          }
+          footer={footer}
         >
           <TimelineChart frame={frame} />
-        </Box>
-        <Row justify="space-between" gap={r.pad}>
-          <Legend />
-          <McpServers servers={servers} />
-        </Row>
-        <NetworkHosts hosts={reached} />
-        {skills.length ? <UsageRow title="SKILLS" chips={skills} /> : null}
-        <UsageRow title="MODELS" chips={models} />
-        <Box
-          style={{
-            flexDirection: r.compact ? "column" : "row",
-            gap: r.pad,
-            alignItems: "flex-start",
-          }}
-        >
-          {lane ? (
-            <ContextMap
-              map={map}
-              agent={lane.agent.name}
-              width={panelWidths.context}
-            />
-          ) : null}
-          <TaskBoard
-            board={work}
-            owners={owners}
-            width={panelWidths.board}
-            height={r.contextHeight}
-          />
-        </Box>
+          <Row justify="space-between" gap={r.pad}>
+            <Legend />
+            <McpServers servers={servers} />
+          </Row>
+          <NetworkHosts hosts={reached} />
+          {skills.length ? <UsageRow title="SKILLS" chips={skills} /> : null}
+          <UsageRow title="MODELS" chips={models} />
+          <Box
+            style={{
+              flexDirection: r.compact ? "column" : "row",
+              gap: r.pad,
+              alignItems: "flex-start",
+            }}
+          >
+            {lane ? (
+              <ContextMap
+                map={map}
+                agent={lane.agent.name}
+                width={panelWidths.context}
+              />
+            ) : null}
+            <TaskBoard board={work} owners={owners} width={panelWidths.board} />
+          </Box>
+        </PaneTemplate>
       </MetricsContext.Provider>
     </AssetsContext.Provider>
   );

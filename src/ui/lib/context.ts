@@ -5,7 +5,7 @@ import { type Theme, themeDark } from "@/ui/lib/theme.ts";
 
 export const ThemeContext = createContext<Theme>(themeDark);
 export const MetricsContext = createContext<Responsive>(
-  responsive({ width: 1100, height: 640 }, 0),
+  responsive({ width: 1100, height: 640 }),
 );
 
 // What the machine has set up, used to explain what a session did, never to list it.

@@ -2,17 +2,15 @@ import type { ReactNode } from "react";
 import { Box, Column, Row } from "@/ui/atoms/Box.tsx";
 import { useMetrics, useTheme } from "@/ui/lib/context.ts";
 
-// Sidebar and main on wide panes; on compact ones the switcher replaces the sidebar.
+// Sidebar and pane on wide windows; on compact ones the switcher replaces the sidebar.
 // With one session there is nothing to switch, so both are omitted.
 export const DashboardTemplate = ({
   sidebar,
   switcher,
-  footer,
   children,
 }: {
   sidebar?: ReactNode;
   switcher?: ReactNode;
-  footer: ReactNode;
   children: ReactNode;
 }) => {
   const r = useMetrics();
@@ -20,28 +18,29 @@ export const DashboardTemplate = ({
   return (
     <Row
       align="stretch"
-      gap={r.pad}
       style={{
         width: "100%",
         height: "100%",
-        padding: r.pad,
         backgroundColor: theme.background,
       }}
     >
       {r.compact || !sidebar ? null : (
-        <Box style={{ width: r.sidebar, flexShrink: 0, overflow: "hidden" }}>
+        <Box
+          style={{
+            width: r.sidebar + r.pad * 2,
+            flexShrink: 0,
+            padding: r.pad,
+            overflow: "hidden",
+          }}
+        >
           {sidebar}
         </Box>
       )}
-      <Column
-        gap={r.pad}
-        style={{ flexGrow: 1, minWidth: 0, overflow: "hidden" }}
-      >
-        {r.compact ? (switcher ?? null) : null}
-        <Column gap={r.pad} style={{ flexShrink: 1, minHeight: 0 }}>
-          {children}
-        </Column>
-        {footer}
+      <Column style={{ flexGrow: 1, minWidth: 0, overflow: "hidden" }}>
+        {r.compact && switcher ? (
+          <Box style={{ padding: r.pad, paddingBottom: 0 }}>{switcher}</Box>
+        ) : null}
+        {children}
       </Column>
     </Row>
   );

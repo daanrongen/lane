@@ -2,7 +2,6 @@ import { useWindowSize } from "@gpuix/react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { Asset } from "@/domain/assets.ts";
 import type { Session } from "@/domain/session.ts";
-import { Box } from "@/ui/atoms/Box.tsx";
 import { Text } from "@/ui/atoms/Text.tsx";
 import { MetricsContext } from "@/ui/lib/context.ts";
 import { sessionTitle } from "@/ui/lib/format.ts";
@@ -26,6 +25,7 @@ import { SessionList } from "@/ui/organisms/SessionList.tsx";
 import { SessionSwitcher } from "@/ui/organisms/SessionSwitcher.tsx";
 import { RunPage } from "@/ui/pages/RunPage.tsx";
 import { DashboardTemplate } from "@/ui/templates/DashboardTemplate.tsx";
+import { PaneTemplate } from "@/ui/templates/PaneTemplate.tsx";
 
 const ZOOM = { min: 0.6, max: 2.4, step: 0.1 };
 const clampZoom = (z: number) =>
@@ -103,7 +103,7 @@ export const DashboardPage = ({
   const opened = useOpened(ports, selected);
   const assets = useStore(useAssets(ports, selected?.cwd)?.assets ?? none);
   const many = ordered.length > 1;
-  const metrics = responsive(size, 0, zoom, many);
+  const metrics = responsive(size, zoom, many);
 
   const nav = useRef({ groups, selected });
   nav.current = { groups, selected };
@@ -136,7 +136,7 @@ export const DashboardPage = ({
             <SessionList
               groups={groups}
               selected={selected}
-              height={(size.height - 3 * metrics.pad) * 0.92}
+              height={(size.height - 2 * metrics.pad) * 0.92}
             />
           ) : undefined
         }
@@ -149,7 +149,6 @@ export const DashboardPage = ({
             />
           ) : undefined
         }
-        footer={<KeyHints />}
       >
         {selected && opened ? (
           <RunPage
@@ -163,13 +162,14 @@ export const DashboardPage = ({
             zoom={zoom}
             keys={keys}
             sidebar={many}
+            footer={<KeyHints />}
           />
         ) : (
-          <Box style={{ flexGrow: 1 }}>
+          <PaneTemplate footer={<KeyHints />}>
             <Text tone="dim">
               {sessions.length ? "opening…" : "no running Claude Code sessions"}
             </Text>
-          </Box>
+          </PaneTemplate>
         )}
       </DashboardTemplate>
     </MetricsContext.Provider>
