@@ -24,6 +24,7 @@ export const Text = ({
     <text
       style={{
         fontSize: r.font[size],
+        lineHeight: Math.round(r.font[size] * 1.25),
         color: theme[tone],
         whiteSpace: "nowrap",
         textOverflow: "ellipsis",

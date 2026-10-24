@@ -56,8 +56,8 @@ export const responsive = (
   const chrome = px(282) + px(100);
   const rowHeight = clamp(
     Math.floor((size.height - chrome) / Math.max(lanes, 1)),
-    px(42),
-    px(88),
+    px(36),
+    px(52),
   );
 
   // The context map takes some of the height the lanes leave, but stays small.
@@ -75,7 +75,7 @@ export const responsive = (
     labels,
     plotWidth: Math.max(160, inner - labels),
     rowHeight,
-    barHeight: Math.max(10, Math.round(rowHeight * 0.42)),
+    barHeight: Math.max(10, Math.round(rowHeight * 0.5)),
     contextHeight,
     dot: px(8),
     tickEvery: px(90),
