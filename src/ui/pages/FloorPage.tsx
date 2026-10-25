@@ -39,6 +39,7 @@ export const FloorPage = ({ ports, keys }: { ports: UiPorts; keys: Keys }) => {
   const [span, setSpan] = useState(300);
   const [help, setHelp] = useState(false);
   const [lens, setLens] = useState<Lens>();
+  const [onlyShared, setOnlyShared] = useState(false);
   const [dismissed, setDismissed] = useState("");
   const [finding, setFinding] = useState<{ query: string; index: number }>();
   const r = responsive(size);
@@ -106,6 +107,7 @@ export const FloorPage = ({ ports, keys }: { ports: UiPorts; keys: Keys }) => {
           return;
         }
         if (key === "?") setHelp(true);
+        if (key === "t") setOnlyShared((on) => !on);
         if (key === "/") setFinding({ query: "", index: 0 });
         const go = (to: { ref: AgentRef } | undefined) =>
           to && setPicked(to.ref);
@@ -171,6 +173,7 @@ export const FloorPage = ({ ports, keys }: { ports: UiPorts; keys: Keys }) => {
               now={now}
               width={r.compact ? total : total - fleetWidth - r.pad}
               selected={selected}
+              onlyShared={onlyShared}
               onPick={(ref) => setLens({ what: { ref } })}
             />
           </Box>

@@ -7,7 +7,7 @@ export const ControlsBar = ({ selected }: { selected: boolean }) => {
     <Text size="small" tone="dim">
       {r.compact
         ? "↑↓ agent  n attention  / find  ? help"
-        : `↑↓ agent   n/N attention   / find   +/- time   ? help   ${selected ? "esc clear   " : ""}q quit`}
+        : `↑↓ agent   n/N attention   / find   t shared   +/- time   ? help   ${selected ? "esc clear   " : ""}q quit`}
     </Text>
   );
 };

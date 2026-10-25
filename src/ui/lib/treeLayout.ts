@@ -14,7 +14,7 @@ export interface TreeFrame {
   readonly height: number;
 }
 
-const depthOf = (n: TreeNode): number =>
+export const depthOf = (n: TreeNode): number =>
   1 + Math.max(0, ...n.children.map(depthOf));
 
 // A tidy tree growing right: a leaf takes a row, a parent sits level with the middle of its children.

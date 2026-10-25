@@ -100,3 +100,12 @@ export const fileTree = (
   }
   return seal(top, collided);
 };
+
+// Only the files more than one agent touched, and the folders leading to them.
+export const shared = (n: TreeNode): TreeNode | undefined => {
+  if (n.kind === "file") {
+    return Object.keys(n.agents).length > 1 ? n : undefined;
+  }
+  const children = n.children.flatMap((c) => shared(c) ?? []);
+  return children.length > 0 ? { ...n, children } : undefined;
+};

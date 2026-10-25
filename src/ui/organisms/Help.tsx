@@ -9,6 +9,7 @@ const KEYS: readonly (readonly [string, string])[] = [
     "/",
     "find an agent, or a file, host, MCP server, skill or model to filter the feed",
   ],
+  ["t", "show only files several agents touched"],
   ["+ / -", "zoom the time lanes"],
   ["esc", "clear the feed filter, then the selection"],
   ["?", "show or hide this help"],

@@ -3,18 +3,20 @@ import { useMemo } from "react";
 import type { AgentView, Floor, WorkspaceView } from "@/domain/floor.ts";
 import type { AgentRef } from "@/domain/ids.ts";
 import { file, folder, type Ref } from "@/domain/ref.ts";
+import { shared, type TreeNode } from "@/domain/tree.ts";
 import { baseName } from "@/domain/workspace.ts";
 import { Column, Row } from "@/ui/atoms/Box.tsx";
 import { Text } from "@/ui/atoms/Text.tsx";
 import { useMetrics, useTheme } from "@/ui/lib/context.ts";
 import { harnessColor } from "@/ui/lib/look.ts";
 import { alpha } from "@/ui/lib/theme.ts";
-import { layoutTree } from "@/ui/lib/treeLayout.ts";
+import { depthOf, layoutTree } from "@/ui/lib/treeLayout.ts";
 
 const RECENT = 120_000;
 
 const Workspace = ({
   space,
+  tree,
   agents,
   now,
   width,
@@ -22,6 +24,7 @@ const Workspace = ({
   onPick,
 }: {
   space: WorkspaceView;
+  tree: TreeNode;
   agents: ReadonlyMap<AgentRef, AgentView>;
   now: number;
   width: number;
@@ -30,11 +33,18 @@ const Workspace = ({
 }) => {
   const r = useMetrics();
   const theme = useTheme();
-  const name = Math.round(r.charWidth * 9);
+  const depth = depthOf(tree);
+  // Names give way before the tree runs out of width.
+  const name = Math.round(
+    Math.max(
+      r.charWidth * 4,
+      Math.min(r.charWidth * 9, (width - r.dot * 2) / depth - r.dot * 7),
+    ),
+  );
   const label = name + r.dot * 7;
   const frame = useMemo(
-    () => layoutTree(space.tree, width - r.dot * 2, r.row, label),
-    [space.tree, width, r.dot, r.row, label],
+    () => layoutTree(tree, width - r.dot * 2, r.row, label),
+    [tree, width, r.dot, r.row, label],
   );
   return (
     <Column>
@@ -56,6 +66,7 @@ const Workspace = ({
           position: "relative",
           width,
           height: frame.height,
+          overflow: "hidden",
           marginLeft: r.dot,
         }}
       >
@@ -155,12 +166,14 @@ export const TreePanel = ({
   now,
   width,
   selected,
+  onlyShared,
   onPick,
 }: {
   floor: Floor;
   now: number;
   width: number;
   selected?: AgentRef;
+  onlyShared: boolean;
   onPick: (ref: Ref) => void;
 }) => {
   const r = useMetrics();
@@ -171,26 +184,30 @@ export const TreePanel = ({
   const spaces = useMemo(
     () =>
       [...floor.workspaces]
-        .filter((w) => w.tree.children.length > 0)
-        .sort((a, b) => a.root.localeCompare(b.root)),
-    [floor.workspaces],
+        .sort((a, b) => a.root.localeCompare(b.root))
+        .flatMap((w) => {
+          const tree = onlyShared ? shared(w.tree) : w.tree;
+          return tree && tree.children.length > 0 ? [{ space: w, tree }] : [];
+        }),
+    [floor.workspaces, onlyShared],
   );
   return (
     <Column style={{ width, flexShrink: 0 }}>
       <Row style={{ height: r.row, paddingLeft: r.dot }}>
         <Text size="small" tone="dim">
-          WHERE THEY WORK
+          {onlyShared ? "WHERE THEY WORK · SHARED FILES" : "WHERE THEY WORK"}
         </Text>
       </Row>
       {spaces.length === 0 ? (
         <Text tone="dim" style={{ paddingLeft: r.dot }}>
-          no files touched yet
+          {onlyShared ? "no file is shared yet" : "no files touched yet"}
         </Text>
       ) : (
-        spaces.map((w) => (
+        spaces.map(({ space, tree }) => (
           <Workspace
-            key={w.root}
-            space={w}
+            key={space.root}
+            space={space}
+            tree={tree}
             agents={agents}
             now={now}
             width={width}

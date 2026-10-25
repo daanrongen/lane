@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { AgentRef } from "@/domain/ids.ts";
-import { fileTree, type Touch } from "@/domain/tree.ts";
+import { fileTree, shared, type Touch } from "@/domain/tree.ts";
 import { baseName, resolvePath, within } from "@/domain/workspace.ts";
 
 const a = AgentRef("claude", "t1", "main");
@@ -74,5 +74,25 @@ describe("fileTree", () => {
       children: [],
       weight: 0,
     });
+  });
+});
+
+describe("shared", () => {
+  test("keeps only files several agents touched, with their folders", () => {
+    const tree = fileTree("/w/api", [
+      touch(a, "/w/api/packages/ui/Button.tsx"),
+      touch(b, "/w/api/packages/ui/Button.tsx"),
+      touch(a, "/w/api/src/index.ts"),
+    ]);
+    const only = shared(tree);
+    expect(only?.children.map((c) => c.name)).toEqual(["packages/ui"]);
+    expect(only?.children[0]?.children.map((c) => c.name)).toEqual([
+      "Button.tsx",
+    ]);
+  });
+
+  test("nothing shared leaves nothing", () => {
+    const tree = fileTree("/w/api", [touch(a, "/w/api/x.ts")]);
+    expect(shared(tree)).toBeUndefined();
   });
 });
