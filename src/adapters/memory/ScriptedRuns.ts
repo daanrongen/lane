@@ -48,6 +48,23 @@ const parse = (id: string) => {
   return { key: id.slice(0, at), cycle: Number(id.slice(at + 1)) };
 };
 
+// A quota in a story resets some seconds into it; on the wire it is epoch ms.
+const anchored = (e: RunEvent, began: number): RunEvent =>
+  e._tag === "SignalReported" &&
+  e.reading.signal._tag === "Limit" &&
+  e.reading.signal.resetsAt !== undefined
+    ? {
+        ...e,
+        reading: {
+          ...e.reading,
+          signal: {
+            ...e.reading.signal,
+            resetsAt: began + e.reading.signal.resetsAt * 1000,
+          },
+        },
+      }
+    : e;
+
 // Stories that play out in real time, so a demo ticks like a live machine.
 export const scriptedHarness = (
   id: HarnessId,
@@ -76,7 +93,9 @@ export const scriptedHarness = (
       let sent = 0;
       const due = Effect.map(Clock.currentTimeMillis, (now) => {
         const upto = beats.filter((b) => b.at * 1000 <= now - began).length;
-        const out = beats.slice(sent, upto).map((b) => b.event);
+        const out = beats
+          .slice(sent, upto)
+          .map((b) => anchored(b.event, began));
         sent = upto;
         return out;
       });

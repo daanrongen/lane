@@ -5,7 +5,7 @@ import { Dot } from "@/ui/atoms/Dot.tsx";
 import { Text } from "@/ui/atoms/Text.tsx";
 import { useMetrics, useTheme } from "@/ui/lib/context.ts";
 import { duration } from "@/ui/lib/format.ts";
-import { place, type Tick } from "@/ui/lib/lane.ts";
+import { type Elbows, place, type Tick } from "@/ui/lib/lane.ts";
 import {
   harnessColor,
   INSIGHT_GLYPH,
@@ -13,8 +13,6 @@ import {
   stateLook,
 } from "@/ui/lib/look.ts";
 import { alpha } from "@/ui/lib/theme.ts";
-
-const mark = { kind: "spawn", failed: false, awaiting: false } as const;
 
 export interface FleetColumns {
   readonly facts: number;
@@ -57,6 +55,7 @@ export const FleetRow = ({
   now,
   cols,
   grid,
+  elbows,
   selected,
   note,
   onSelect,
@@ -65,6 +64,7 @@ export const FleetRow = ({
   now: number;
   cols: FleetColumns;
   grid: readonly Tick[];
+  elbows?: Elbows;
   selected: boolean;
   note?: string;
   onSelect: () => void;
@@ -77,15 +77,6 @@ export const FleetRow = ({
   const quiet = agent.lastEventAt
     ? duration((now - agent.lastEventAt) / 1000)
     : "";
-  const handoff =
-    agent.born === undefined
-      ? undefined
-      : place(
-          { ...mark, start: agent.born, end: agent.born },
-          now,
-          cols.span,
-          cols.lane,
-        );
   const what = agent.now?.label ?? note ?? agent.state;
   return (
     <Row
@@ -149,26 +140,39 @@ export const FleetRow = ({
             }}
           />
         ))}
-        {handoff ? (
+        {elbows?.through.map((x) => (
+          <div
+            key={x}
+            style={{
+              position: "absolute",
+              left: x,
+              top: agent.depth === 0 ? Math.round(r.row / 2) : 0,
+              width: 1,
+              height: agent.depth === 0 ? Math.round(r.row / 2) : r.row,
+              backgroundColor: alpha(color, 0.6),
+            }}
+          />
+        ))}
+        {elbows?.own !== undefined ? (
           <>
             <div
               style={{
                 position: "absolute",
-                left: handoff.x,
+                left: elbows.own,
                 top: 0,
                 width: 1,
                 height: Math.round(r.row / 2),
-                backgroundColor: color,
+                backgroundColor: alpha(color, 0.6),
               }}
             />
             <div
               style={{
                 position: "absolute",
-                left: handoff.x,
+                left: elbows.own,
                 top: Math.round(r.row / 2),
                 width: r.dot,
                 height: 1,
-                backgroundColor: color,
+                backgroundColor: alpha(color, 0.6),
               }}
             />
           </>

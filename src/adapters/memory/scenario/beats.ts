@@ -190,10 +190,12 @@ export const limit = (
   at: number,
   window: string,
   used: number,
+  // Seconds into the story when the quota resets.
+  resetsAt?: number,
 ) =>
   beat(at, {
     _tag: "SignalReported",
-    reading: { agentId, at, signal: { _tag: "Limit", window, used } },
+    reading: { agentId, at, signal: { _tag: "Limit", window, used, resetsAt } },
   });
 
 export const ctx = (

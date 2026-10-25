@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
-import type { LaneBar } from "@/domain/floor.ts";
-import { place, ticks } from "@/ui/lib/lane.ts";
+import type { AgentView, LaneBar } from "@/domain/floor.ts";
+import { AgentRef } from "@/domain/ids.ts";
+import { elbows, place, ticks } from "@/ui/lib/lane.ts";
 
 const bar = (start: number, end?: number): LaneBar => ({
   start,
@@ -37,5 +38,35 @@ describe("ticks", () => {
       { x: 240, label: "-6m00s" },
       { x: 120, label: "-8m00s" },
     ]);
+  });
+});
+
+describe("elbows", () => {
+  const view = (name: string, depth: number, born?: number) =>
+    ({
+      ref: AgentRef("claude", "t", name),
+      thread: "t",
+      depth,
+      born,
+    }) as AgentView;
+  const rows = [
+    view("main", 0),
+    view("a", 1, 90_000),
+    view("b", 1, 95_000),
+    view("late", 1),
+  ];
+  const out = elbows(rows, 100_000, 100, 1000);
+  const of = (i: number) => out.get(rows[i]?.ref as AgentRef);
+
+  test("a sub-agent's line starts at its handoff", () => {
+    expect(of(1)?.own).toBe(900);
+    expect(of(2)?.own).toBe(950);
+    expect(of(0)?.own).toBeUndefined();
+  });
+
+  test("lines of later sub-agents pass down through the rows above them", () => {
+    expect(of(0)?.through).toEqual([900, 950]);
+    expect(of(1)?.through).toEqual([950]);
+    expect(of(2)?.through).toEqual([]);
   });
 });

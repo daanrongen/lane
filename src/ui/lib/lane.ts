@@ -1,4 +1,5 @@
-import type { LaneBar } from "@/domain/floor.ts";
+import type { AgentView, LaneBar } from "@/domain/floor.ts";
+import type { AgentRef } from "@/domain/ids.ts";
 import { duration } from "@/ui/lib/format.ts";
 
 export interface Placed {
@@ -40,4 +41,38 @@ export const ticks = (span: number, width: number): Tick[] => {
     });
   }
   return out;
+};
+
+export interface Elbows {
+  // Where this agent was handed its work.
+  readonly own?: number;
+  // Where the sub-agents below it were, whose lines run down through this row.
+  readonly through: readonly number[];
+}
+
+const MARK = { kind: "spawn", failed: false, awaiting: false } as const;
+
+// For each row of a fleet in display order, the handoff lines that start, end or pass in it.
+export const elbows = (
+  agents: readonly AgentView[],
+  now: number,
+  span: number,
+  width: number,
+): ReadonlyMap<AgentRef, Elbows> => {
+  const xOf = (a: AgentView) =>
+    a.born === undefined
+      ? undefined
+      : place({ ...MARK, start: a.born, end: a.born }, now, span, width)?.x;
+  return new Map(
+    agents.map((a, i) => [
+      a.ref,
+      {
+        own: a.depth > 0 ? xOf(a) : undefined,
+        through: agents
+          .slice(i + 1)
+          .filter((b) => b.depth > 0 && b.thread === a.thread)
+          .flatMap((b) => xOf(b) ?? []),
+      },
+    ]),
+  );
 };

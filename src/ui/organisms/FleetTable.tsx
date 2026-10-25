@@ -7,7 +7,7 @@ import { Text } from "@/ui/atoms/Text.tsx";
 import { useMetrics, useTheme } from "@/ui/lib/context.ts";
 import type { Group } from "@/ui/lib/fleet.ts";
 import { bytes, duration, plural } from "@/ui/lib/format.ts";
-import { ticks } from "@/ui/lib/lane.ts";
+import { elbows as elbowsOf, ticks } from "@/ui/lib/lane.ts";
 import { alpha } from "@/ui/lib/theme.ts";
 import { FleetRow } from "@/ui/molecules/FleetRow.tsx";
 
@@ -37,6 +37,16 @@ export const FleetTable = ({
   const facts = Math.round(width * 0.58);
   const cols = { facts, lane: width - facts, span };
   const grid = useMemo(() => ticks(span, cols.lane), [span, cols.lane]);
+  const joins = useMemo(
+    () =>
+      elbowsOf(
+        groups.flatMap((g) => g.agents),
+        now,
+        span,
+        cols.lane,
+      ),
+    [groups, now, span, cols.lane],
+  );
   return (
     <Column style={{ width, flexShrink: 0 }}>
       <Row style={{ height: r.row, flexShrink: 0 }}>
@@ -98,6 +108,7 @@ export const FleetTable = ({
               now={now}
               cols={cols}
               grid={grid}
+              elbows={joins.get(a.ref)}
               selected={a.ref === selected}
               note={notes.get(a.ref)}
               onSelect={() => onSelect(a.ref)}
