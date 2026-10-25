@@ -72,6 +72,7 @@ const Line = ({
   now,
   mine,
 }: {
+  // False when another agent is selected, so this row recedes.
   mine: boolean;
   item: FeedItem;
   who: string;
@@ -82,13 +83,7 @@ const Line = ({
   const theme = useTheme();
   const bad = item.status === "failed" || item.status === "denied";
   return (
-    <Row
-      gap={r.dot}
-      style={{
-        height: r.row,
-        backgroundColor: mine ? alpha(theme.text, 0.1) : undefined,
-      }}
-    >
+    <Row gap={r.dot} style={{ height: r.row }}>
       <Text size="small" tone="dim" style={{ width: r.charWidth * 6 }}>
         {duration((now - item.at) / 1000)}
       </Text>
@@ -101,7 +96,7 @@ const Line = ({
       </Text>
       <Text
         size="small"
-        tone={bad ? "failed" : "text"}
+        tone={bad ? "failed" : mine ? "text" : "dim"}
         style={{ flexGrow: 1, minWidth: 0 }}
       >
         {item.label}
@@ -131,7 +126,7 @@ export const FeedPanel = ({
   const r = useMetrics();
   const agents = new Map(floor.agents.map((a) => [a.ref, a]));
   return (
-    <Column style={{ width, paddingLeft: r.dot }}>
+    <Column style={{ width }}>
       <Row style={{ height: r.row }}>
         <Text size="small" tone="dim">
           FEED
@@ -155,7 +150,7 @@ export const FeedPanel = ({
       <Histogram
         items={about(floor, lens?.what)}
         now={now}
-        width={width - r.dot}
+        width={width}
         during={lens?.during}
         onPick={(during) => onLens({ ...lens, during })}
       />
@@ -173,7 +168,7 @@ export const FeedPanel = ({
             who={a?.name ?? ""}
             harness={a?.harness ?? ""}
             now={now}
-            mine={item.agent === selected}
+            mine={!selected || item.agent === selected}
           />
         );
       })}

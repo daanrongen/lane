@@ -50,11 +50,7 @@ export const FleetTable = ({
   return (
     <Column style={{ width, flexShrink: 0 }}>
       <Row style={{ height: r.row, flexShrink: 0 }}>
-        <Text
-          size="small"
-          tone="dim"
-          style={{ width: facts, paddingLeft: r.dot }}
-        >
+        <Text size="small" tone="dim" style={{ width: facts }}>
           AGENTS
         </Text>
         <Row style={{ position: "relative", width: cols.lane, height: "100%" }}>

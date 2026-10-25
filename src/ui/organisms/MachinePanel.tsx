@@ -32,7 +32,6 @@ export const MachinePanel = ({
       align="flex-start"
       style={{
         flexDirection: r.compact ? "column" : "row",
-        paddingLeft: r.dot,
       }}
     >
       <Column style={{ width: col }}>

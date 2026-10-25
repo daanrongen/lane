@@ -234,17 +234,13 @@ export const DetailPanel = ({
   const theme = useTheme();
   if (!agent) return <MachinePanel floor={floor} width={width} />;
   if (!run) {
-    return (
-      <Text tone="dim" style={{ paddingLeft: r.dot }}>
-        no transcript for this agent
-      </Text>
-    );
+    return <Text tone="dim">no transcript for this agent</Text>;
   }
   const col = r.compact ? width : Math.floor((width - r.pad * 3) / 4);
   const look = stateLook(agent.state, theme);
   return (
     <Column gap={r.dot}>
-      <Row gap={r.dot} style={{ paddingLeft: r.dot }}>
+      <Row gap={r.dot}>
         <Text
           style={{ color: look.color }}
         >{`${look.glyph} ${agent.name}`}</Text>
@@ -257,7 +253,6 @@ export const DetailPanel = ({
         align="flex-start"
         style={{
           flexDirection: r.compact ? "column" : "row",
-          paddingLeft: r.dot,
         }}
       >
         <Column style={{ width: col }}>

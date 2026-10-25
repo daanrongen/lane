@@ -4,9 +4,8 @@ import type { AgentRef } from "@/domain/ids.ts";
 import { Column, Row } from "@/ui/atoms/Box.tsx";
 import { Text } from "@/ui/atoms/Text.tsx";
 import { changes } from "@/ui/lib/changes.ts";
-import { useMetrics, useTheme } from "@/ui/lib/context.ts";
+import { useMetrics } from "@/ui/lib/context.ts";
 import { duration } from "@/ui/lib/format.ts";
-import { alpha } from "@/ui/lib/theme.ts";
 
 const SHOWN = 10;
 
@@ -23,7 +22,6 @@ export const ChangesPanel = ({
   width: number;
 }) => {
   const r = useMetrics();
-  const theme = useTheme();
   const rows = useMemo(() => changes(floor), [floor]);
   const names = new Map(floor.agents.map((a) => [a.ref, a.name]));
   return (
@@ -39,23 +37,19 @@ export const ChangesPanel = ({
         </Text>
       ) : null}
       {rows.slice(0, SHOWN).map((c) => (
-        <Row
-          key={c.path}
-          gap={r.dot}
-          style={{
-            height: r.row,
-            backgroundColor:
-              selected && c.agents.includes(selected)
-                ? alpha(theme.text, 0.1)
-                : undefined,
-          }}
-        >
+        <Row key={c.path} gap={r.dot} style={{ height: r.row }}>
           <Text size="small" tone="dim" style={{ width: r.charWidth * 6 }}>
             {duration((now - c.last) / 1000)}
           </Text>
           <Text
             size="small"
-            tone={c.collided ? "failed" : "text"}
+            tone={
+              c.collided
+                ? "failed"
+                : !selected || c.agents.includes(selected)
+                  ? "text"
+                  : "dim"
+            }
             style={{ flexGrow: 1, minWidth: 0 }}
           >
             {c.short}

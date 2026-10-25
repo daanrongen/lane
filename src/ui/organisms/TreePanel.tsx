@@ -235,13 +235,13 @@ export const TreePanel = ({
   );
   return (
     <Column style={{ width, flexShrink: 0 }}>
-      <Row style={{ height: r.row, paddingLeft: r.dot }}>
+      <Row style={{ height: r.row }}>
         <Text size="small" tone="dim">
           {onlyShared ? "WHERE THEY WORK · SHARED FILES" : "WHERE THEY WORK"}
         </Text>
       </Row>
       {spaces.length === 0 ? (
-        <Text tone="dim" style={{ paddingLeft: r.dot }}>
+        <Text tone="dim">
           {onlyShared ? "no file is shared yet" : "no files touched yet"}
         </Text>
       ) : (
