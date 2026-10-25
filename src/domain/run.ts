@@ -1,4 +1,8 @@
+import type { Act } from "@/domain/act.ts";
 import type { AgentId, SpanId, ThreadId } from "@/domain/ids.ts";
+import type { Link } from "@/domain/link.ts";
+import type { Plan } from "@/domain/plan.ts";
+import type { Reading } from "@/domain/signal.ts";
 
 export interface Usage {
   readonly input: number;
@@ -140,6 +144,10 @@ export interface Run {
   readonly requests: readonly Request[];
   readonly skills: readonly SkillUse[];
   readonly modes: readonly ModeChange[];
+  readonly acts: readonly Act[];
+  readonly readings: readonly Reading[];
+  readonly links: readonly Link[];
+  readonly plans: readonly Plan[];
 }
 
 export const emptyRun = (threadId: ThreadId, startedAt: number): Run => ({
@@ -155,4 +163,8 @@ export const emptyRun = (threadId: ThreadId, startedAt: number): Run => ({
   requests: [],
   skills: [],
   modes: [],
+  acts: [],
+  readings: [],
+  links: [],
+  plans: [],
 });

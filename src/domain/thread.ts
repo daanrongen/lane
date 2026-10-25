@@ -1,9 +1,9 @@
 import type { ThreadId } from "@/domain/ids.ts";
 
 // Who runs the agents; the dashboard is agnostic to which.
-export type HarnessId = "claude" | "codex";
+export type HarnessId = "claude" | "codex" | "ollama" | (string & {});
 
-// A past session has no running process; its transcript is all that remains.
+// A past thread has no running process; its transcript is all that remains.
 export type ThreadStatus = "busy" | "idle" | "past";
 
 export interface Thread {

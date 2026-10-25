@@ -65,9 +65,18 @@ export const cellLook = (kind: CellKind, theme: Theme) => {
   return { color, style };
 };
 
-// Each harness gets one hue, so sessions read apart at a glance.
-export const harnessColor = (harness: HarnessId, theme: Theme) =>
-  ({ claude: theme.agents[2], codex: theme.agents[3] })[harness] ?? theme.dim;
+// Each harness gets one hue, so agents read apart at a glance.
+export const harnessColor = (harness: HarnessId, theme: Theme) => {
+  const known: Record<string, string | undefined> = {
+    claude: theme.agents[2],
+    codex: theme.agents[3],
+    ollama: theme.text,
+  };
+  const hash = [...harness].reduce((n, c) => n + c.charCodeAt(0), 0);
+  return (
+    known[harness] ?? theme.agents[hash % theme.agents.length] ?? theme.dim
+  );
+};
 
 // Who served the model, so a ribbon shows at a glance when the provider changed.
 export const providerColor = (provider: string | undefined, theme: Theme) =>
