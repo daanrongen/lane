@@ -479,3 +479,45 @@ describe("what the result and the turn say", () => {
     expect(exit(true)?.status).toBe("rejected");
   });
 });
+
+describe("hooks", () => {
+  const hook = (s: number, attachment: object) => ({
+    type: "attachment",
+    timestamp: iso(s),
+    uuid: `h${s}`,
+    attachment,
+  });
+  const acts = (lines: unknown[]) =>
+    foldAll(emptyRun(ThreadId("t"), 0), decodeAll(cfg, lines)).acts;
+
+  test("a hook that blocked is a failed act of class hook", () => {
+    const [act] = acts([
+      hook(5, {
+        type: "hook_blocking_error",
+        hookName: "PreToolUse:Bash",
+        command: "guard.sh",
+        stderr: "no force pushes\nsee policy",
+        exitCode: 2,
+      }),
+    ]);
+    expect(act).toMatchObject({
+      tool: "hook",
+      label: "PreToolUse:Bash: guard.sh",
+      status: "failed",
+      failure: { class: "hook", reason: "no force pushes" },
+      exit: 2,
+    });
+  });
+
+  test("a slow hook shows, a quick one that passed does not", () => {
+    const pass = (ms: number) => ({
+      type: "hook_success",
+      hookName: "PostToolUse:Edit",
+      command: "fmt.sh",
+      durationMs: ms,
+    });
+    expect(acts([hook(5, pass(40))])).toHaveLength(0);
+    const [slow] = acts([hook(9, pass(3_000))]);
+    expect(slow).toMatchObject({ status: "ok", start: 6, end: 9 });
+  });
+});

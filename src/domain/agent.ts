@@ -104,10 +104,13 @@ export const summarise = (
 ): readonly AgentSummary[] =>
   orderAgents(run.agents).map(({ agent, depth }) => {
     const acts = run.acts.filter((a) => a.agentId === agent.id);
-    const last = acts.reduce<Act | undefined>(
-      (best, a) => (!best || a.start >= best.start ? a : best),
-      undefined,
-    );
+    // A hook that blocked one call does not make the agent failed.
+    const last = acts
+      .filter((a) => a.tool !== "hook")
+      .reduce<Act | undefined>(
+        (best, a) => (!best || a.start >= best.start ? a : best),
+        undefined,
+      );
     const turns = run.turns.filter((t) => t.agentId === agent.id);
     const lastEvent = Math.max(
       0,

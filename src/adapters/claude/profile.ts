@@ -13,6 +13,7 @@ export const claudeProfile: HarnessProfile = {
     edits: "partial",
     mcp: "native",
     skills: "native",
+    hooks: "partial",
     rules: "partial",
     plan: "native",
     approvals: "native",

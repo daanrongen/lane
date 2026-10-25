@@ -145,6 +145,17 @@ const approvalOf = (d: Json | undefined): Approval | undefined => {
   };
 };
 
+const HOOK_FAILURES = new Set([
+  "hook_blocking_error",
+  "hook_non_blocking_error",
+  "hook_error_during_execution",
+  "hook_stopped_continuation",
+  "hook_cancelled",
+]);
+
+// A hook that passed quickly is routine and left out.
+const SLOW_HOOK = 2_000;
+
 const STEP = /^\s*(?:[-*]|\d+[.)])\s+(.+)$/;
 
 // A plan in markdown: the first line is the title, the list items are the steps.
@@ -352,6 +363,46 @@ export const makeDecoder = (cfg: DecoderConfig): Decoder => {
     ];
   };
 
+  // A hook run that failed or took long, as an act so it shows in the lane and feed.
+  const hook = (a: Json | undefined, line: Json, at: number): RunEvent[] => {
+    const type = str(a?.type) ?? "";
+    const failed = HOOK_FAILURES.has(type);
+    const ms = num(a?.durationMs);
+    if (!a || (!failed && !(type === "hook_success" && ms >= SLOW_HOOK))) {
+      return [];
+    }
+    const name = str(a.hookName) ?? str(a.hookEvent) ?? "hook";
+    const cmd = str(a.command);
+    const why =
+      str(a.stderr) ??
+      str(a.content) ??
+      str(rec(a.blockingError)?.blockingError);
+    return [
+      {
+        _tag: "ActOpened",
+        act: {
+          id: ActId(`hook:${str(line.uuid) ?? at}`),
+          agentId,
+          kind: "tool",
+          tool: "hook",
+          label: [name, cmd].filter(Boolean).join(": ").slice(0, 80),
+          start: Math.max(0, at - ms / 1000),
+          end: at,
+          status: failed ? "failed" : "ok",
+          touches: commandRefs(cmd),
+          failure: failed
+            ? {
+                class: "hook",
+                reason: (why?.split("\n")[0] || type).slice(0, 200),
+              }
+            : undefined,
+          exit: a.exitCode === undefined ? undefined : num(a.exitCode),
+          fidelity: "observed",
+        },
+      },
+    ];
+  };
+
   const reminder = (a: Json | undefined, at: number): RunEvent[] =>
     a && !NOT_CONTEXT.has(String(a.type))
       ? added(
@@ -507,7 +558,11 @@ export const makeDecoder = (cfg: DecoderConfig): Decoder => {
       }
       if (type === "attachment") {
         const attachment = rec(line.attachment);
-        return [...setup(attachment, at), ...reminder(attachment, at)];
+        return [
+          ...setup(attachment, at),
+          ...hook(attachment, line, at),
+          ...reminder(attachment, at),
+        ];
       }
 
       const msg = rec(line.message);

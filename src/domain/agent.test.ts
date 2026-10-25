@@ -3,7 +3,7 @@ import { stateOf, summarise, THRESHOLDS } from "@/domain/agent.ts";
 import { attentionOf } from "@/domain/attention.ts";
 import type { RunEvent } from "@/domain/events.ts";
 import { foldAll } from "@/domain/fold.ts";
-import { AgentId, SpanId, ThreadId } from "@/domain/ids.ts";
+import { ActId, AgentId, SpanId, ThreadId } from "@/domain/ids.ts";
 import { insightsOf } from "@/domain/insight.ts";
 import { emptyRun } from "@/domain/run.ts";
 
@@ -98,6 +98,30 @@ describe("stateOf", () => {
     ]);
     const s = summarise(run, [])[0];
     expect(s && stateOf(s, 10, true)).toBe("waiting");
+  });
+
+  test("a hook that blocked a call does not make the agent failed", () => {
+    const s = summary([
+      open("a", "Read", 1),
+      close("a", 2),
+      {
+        _tag: "ActOpened",
+        act: {
+          id: ActId("hook:1"),
+          agentId: main,
+          kind: "tool",
+          tool: "hook",
+          label: "guard",
+          start: 3,
+          end: 3,
+          status: "failed",
+          touches: [],
+          fidelity: "observed",
+        },
+      },
+    ]);
+    expect(stateOf(s, 4, true)).toBe("working");
+    expect(s.failed).toBe(1);
   });
 
   test("silence after a finished turn is idle, silence mid-turn is stalled", () => {
