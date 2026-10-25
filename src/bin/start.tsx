@@ -5,6 +5,7 @@ import {
   watchScheme,
 } from "@/adapters/macos/appearance.ts";
 import { makeUiPorts } from "@/app/bridge.ts";
+import type { Fleet } from "@/app/Fleet.ts";
 import type { SessionsStore } from "@/app/SessionsStore.ts";
 import { answerCli, resolveMode } from "@/bin/cli.ts";
 import type { Assets } from "@/ports/Assets.ts";
@@ -14,7 +15,7 @@ import { createKeys } from "@/ui/lib/keys.ts";
 
 // Entrypoints differ only in the layer they provide.
 export const start = async (
-  layer: Layer.Layer<SessionsStore | Harnesses | Assets, unknown>,
+  layer: Layer.Layer<SessionsStore | Harnesses | Assets | Fleet, unknown>,
 ) => {
   answerCli();
   answerAppearanceQuery();

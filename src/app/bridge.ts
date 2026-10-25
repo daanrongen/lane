@@ -8,6 +8,7 @@ import {
   Stream,
   SubscriptionRef,
 } from "effect";
+import { Fleet } from "@/app/Fleet.ts";
 import { openAssets } from "@/app/openAssets.ts";
 import { type OpenRun, openRun } from "@/app/openRun.ts";
 import { SessionsStore } from "@/app/SessionsStore.ts";
@@ -30,12 +31,13 @@ const store = <A>(ref: SubscriptionRef.SubscriptionRef<A>): Store<A> => ({
 
 // Adapts the Effect app to the plain interface the UI consumes.
 export const makeUiPorts = async <E>(
-  layer: Layer.Layer<SessionsStore | Harnesses | Assets, E>,
+  layer: Layer.Layer<SessionsStore | Harnesses | Assets | Fleet, E>,
 ): Promise<UiPorts> => {
   const runtime = ManagedRuntime.make(layer);
   const sessions = await runtime.runPromise(
     SessionsStore.use((s) => Effect.succeed(s.sessions)),
   );
+  const fleet = await runtime.runPromise(Fleet.use(Effect.succeed));
 
   const open = async (session: Thread) => {
     const scope = await Effect.runPromise(Scope.make());
@@ -60,5 +62,12 @@ export const makeUiPorts = async <E>(
       close: () => void Effect.runFork(Scope.close(scope, Exit.void)),
     };
   };
-  return { sessions: store(sessions), open, openAssets: openAssetsFor };
+  return {
+    floor: store(fleet.floor),
+    setups: store(fleet.setups),
+    profiles: fleet.profiles,
+    sessions: store(sessions),
+    open,
+    openAssets: openAssetsFor,
+  };
 };
