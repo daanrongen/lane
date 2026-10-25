@@ -1,14 +1,17 @@
-import type { StyleDesc } from "@gpuix/react";
-import type { ReactNode } from "react";
+import type { PublicInstance, StyleDesc } from "@gpuix/react";
+import type { ReactNode, Ref } from "react";
 
 interface BoxProps {
+  readonly ref?: Ref<PublicInstance>;
   readonly style?: StyleDesc;
   readonly children?: ReactNode;
 }
 
 // gpuix only honours flex properties on `display: "flex"`.
-export const Box = ({ style, children }: BoxProps) => (
-  <div style={{ display: "flex", ...style }}>{children}</div>
+export const Box = ({ ref, style, children }: BoxProps) => (
+  <div ref={ref} style={{ display: "flex", ...style }}>
+    {children}
+  </div>
 );
 
 interface StackProps extends BoxProps {
