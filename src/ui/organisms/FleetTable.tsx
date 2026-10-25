@@ -46,7 +46,7 @@ export const FleetTable = ({
         </Text>
         <Row style={{ position: "relative", width: cols.lane, height: "100%" }}>
           {grid
-            .filter((t) => t.x < cols.lane - r.charWidth * 14)
+            .filter((t) => t.x < cols.lane - r.charWidth * 16)
             .map((t) => (
               <Text
                 key={t.x}

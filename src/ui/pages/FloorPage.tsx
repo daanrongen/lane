@@ -1,7 +1,7 @@
 import { useWindowSize } from "@gpuix/react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { AgentRef } from "@/domain/ids.ts";
-import { Column } from "@/ui/atoms/Box.tsx";
+import { Box, Column } from "@/ui/atoms/Box.tsx";
 import { MetricsContext, useTheme } from "@/ui/lib/context.ts";
 import { groups, order, step, stepAttention } from "@/ui/lib/fleet.ts";
 import { useNow } from "@/ui/lib/hooks/useNow.ts";
@@ -12,6 +12,7 @@ import { AttentionStrip } from "@/ui/organisms/AttentionStrip.tsx";
 import { ControlsBar } from "@/ui/organisms/ControlsBar.tsx";
 import { FleetTable } from "@/ui/organisms/FleetTable.tsx";
 import { TopBar } from "@/ui/organisms/TopBar.tsx";
+import { TreePanel } from "@/ui/organisms/TreePanel.tsx";
 import { PaneTemplate } from "@/ui/templates/PaneTemplate.tsx";
 
 const SPANS = [60, 120, 300, 600, 1800, 3600];
@@ -25,6 +26,9 @@ export const FloorPage = ({ ports, keys }: { ports: UiPorts; keys: Keys }) => {
   const [span, setSpan] = useState(300);
   const r = responsive(size);
   const theme = useTheme();
+
+  const total = size.width - r.pad * 2;
+  const fleetWidth = r.compact ? total : Math.round(total * 0.66);
 
   const gs = useMemo(() => groups(floor), [floor]);
   const agents = useMemo(() => order(gs), [gs]);
@@ -74,15 +78,29 @@ export const FloorPage = ({ ports, keys }: { ports: UiPorts; keys: Keys }) => {
           footer={<ControlsBar selected={selected !== undefined} />}
         >
           <AttentionStrip floor={floor} now={now} onSelect={setPicked} />
-          <FleetTable
-            groups={gs}
-            now={now}
-            span={span}
-            width={size.width - r.pad * 2}
-            selected={selected}
-            onSelect={setPicked}
-            notes={notes}
-          />
+          <Box
+            style={{
+              flexDirection: r.compact ? "column" : "row",
+              alignItems: "flex-start",
+              gap: r.pad,
+            }}
+          >
+            <FleetTable
+              groups={gs}
+              now={now}
+              span={span}
+              width={fleetWidth}
+              selected={selected}
+              onSelect={setPicked}
+              notes={notes}
+            />
+            <TreePanel
+              floor={floor}
+              now={now}
+              width={r.compact ? total : total - fleetWidth - r.pad}
+              selected={selected}
+            />
+          </Box>
         </PaneTemplate>
       </Column>
     </MetricsContext.Provider>
