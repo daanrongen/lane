@@ -14,6 +14,7 @@ import type { Thread } from "@/domain/thread.ts";
 import { assetsOf } from "@/ports/Assets.ts";
 import { harness, harnessesOf } from "@/ports/Harness.ts";
 import { ProcessProbe } from "@/ports/ProcessProbe.ts";
+import { Runtimes } from "@/ports/Runtimes.ts";
 import { Workspaces } from "@/ports/Workspaces.ts";
 
 const main = AgentId("main");
@@ -91,6 +92,7 @@ const run = <A, E>(
             }),
           ),
           Layer.provideMerge(Workspaces.flat),
+          Layer.provideMerge(Runtimes.none),
         ),
       ),
       Effect.scoped,

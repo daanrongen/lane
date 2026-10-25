@@ -20,6 +20,7 @@ import type { Thread } from "@/domain/thread.ts";
 import { Assets } from "@/ports/Assets.ts";
 import { Harnesses } from "@/ports/Harness.ts";
 import { ProcessProbe } from "@/ports/ProcessProbe.ts";
+import { Runtimes } from "@/ports/Runtimes.ts";
 import { Workspaces } from "@/ports/Workspaces.ts";
 
 export interface FleetOptions {
@@ -84,6 +85,7 @@ export const FleetLive = (options: Partial<FleetOptions> = {}) => {
       const readers = yield* Assets;
       const probe = yield* ProcessProbe;
       const spaces = yield* Workspaces;
+      const machine = yield* Runtimes;
 
       const board = yield* SubscriptionRef.make<Floor>(floor(0, []));
       const setups = yield* SubscriptionRef.make<
@@ -177,7 +179,7 @@ export const FleetLive = (options: Partial<FleetOptions> = {}) => {
           ),
         );
 
-        const next = floor(at, entries, alone);
+        const next = floor(at, entries, alone, yield* machine.list);
         const prev = yield* SubscriptionRef.get(board);
         // `at` moves every tick; only a change in what it shows is published.
         if (!isDeepStrictEqual({ ...next, at: 0 }, { ...prev, at: 0 })) {
