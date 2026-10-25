@@ -36,11 +36,17 @@ export const TopBar = ({ floor }: { floor: Floor }) => {
         );
       })}
       <Row gap={r.pad} style={{ flexGrow: 1, justifyContent: "flex-end" }}>
-        {[...harnesses].map(([h, n]) => (
-          <Text key={h} size="small" style={{ color: harnessColor(h, theme) }}>
-            {`${h} ${n}`}
-          </Text>
-        ))}
+        {[...harnesses]
+          .sort(([a], [b]) => a.localeCompare(b))
+          .map(([h, n]) => (
+            <Text
+              key={h}
+              size="small"
+              style={{ color: harnessColor(h, theme) }}
+            >
+              {`${h} ${n}`}
+            </Text>
+          ))}
         <Text size="small" tone="dim">
           {`${tokens(floor.totals.usage.output)} out`}
         </Text>

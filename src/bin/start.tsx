@@ -20,7 +20,7 @@ export const start = async (
   answerCli();
   answerAppearanceQuery();
   const ports = await makeUiPorts(layer);
-  const { keys, emit } = createKeys();
+  const { keys, emit, typing } = createKeys();
   const scheme = await watchScheme();
 
   render(<App ports={ports} scheme={scheme} keys={keys} />, {
@@ -28,7 +28,7 @@ export const start = async (
     appName: "Lane",
     terminal: resolveMode(process.argv.slice(2), process.env) === "terminal",
     onKeyDown: (event) => {
-      if (event.key === "q") process.exit(0);
+      if (event.key === "q" && !typing()) process.exit(0);
       if (event.key) emit(event.key);
     },
   });

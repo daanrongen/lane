@@ -8,6 +8,7 @@ import { groups, order, step, stepAttention } from "@/ui/lib/fleet.ts";
 import { useNow } from "@/ui/lib/hooks/useNow.ts";
 import { useOpened } from "@/ui/lib/hooks/useOpened.ts";
 import { useStore } from "@/ui/lib/hooks/useStore.ts";
+import { search } from "@/ui/lib/palette.ts";
 import type { Keys, UiPorts } from "@/ui/lib/ports.ts";
 import { responsive } from "@/ui/lib/responsive.ts";
 import { AttentionStrip } from "@/ui/organisms/AttentionStrip.tsx";
@@ -16,6 +17,7 @@ import { ControlsBar } from "@/ui/organisms/ControlsBar.tsx";
 import { DetailPanel } from "@/ui/organisms/DetailPanel.tsx";
 import { FeedPanel } from "@/ui/organisms/FeedPanel.tsx";
 import { FleetTable } from "@/ui/organisms/FleetTable.tsx";
+import { Palette } from "@/ui/organisms/Palette.tsx";
 import { TopBar } from "@/ui/organisms/TopBar.tsx";
 import { TreePanel } from "@/ui/organisms/TreePanel.tsx";
 import { PaneTemplate } from "@/ui/templates/PaneTemplate.tsx";
@@ -33,6 +35,7 @@ export const FloorPage = ({ ports, keys }: { ports: UiPorts; keys: Keys }) => {
   const now = useNow(1000);
   const [picked, setPicked] = useState<AgentRef>();
   const [span, setSpan] = useState(300);
+  const [finding, setFinding] = useState<{ query: string; index: number }>();
   const r = responsive(size);
   const theme = useTheme();
 
@@ -58,12 +61,32 @@ export const FloorPage = ({ ports, keys }: { ports: UiPorts; keys: Keys }) => {
   const tasks = useStore(opened?.tasks ?? NO_TASKS);
   const setups = useStore(ports.setups);
 
-  const latest = useRef({ floor, agents, selected });
-  latest.current = { floor, agents, selected };
+  const found = useMemo(
+    () => (finding ? search(agents, finding.query) : []),
+    [agents, finding],
+  );
+  const latest = useRef({ floor, agents, selected, finding, found });
+  latest.current = { floor, agents, selected, finding, found };
+  useEffect(() => keys.typing(finding !== undefined), [keys, finding]);
   useEffect(
     () =>
       keys.subscribe((key) => {
-        const { floor, agents, selected } = latest.current;
+        const { floor, agents, selected, finding, found } = latest.current;
+        if (finding) {
+          const move = (by: number) =>
+            setFinding({
+              ...finding,
+              index: Math.max(
+                0,
+                Math.min(found.length - 1, finding.index + by),
+              ),
+            });
+          if (key === "escape") setFinding(undefined);
+          if (key === "down") move(1);
+          if (key === "up") move(-1);
+          return;
+        }
+        if (key === "/") setFinding({ query: "", index: 0 });
         const go = (to: { ref: AgentRef } | undefined) =>
           to && setPicked(to.ref);
         if (key === "down") go(step(agents, selected, 1));
@@ -137,6 +160,20 @@ export const FloorPage = ({ ports, keys }: { ports: UiPorts; keys: Keys }) => {
             <ChangesPanel floor={floor} now={now} width={half} />
           </Box>
         </PaneTemplate>
+        {finding ? (
+          <Palette
+            query={finding.query}
+            results={found}
+            index={finding.index}
+            width={Math.min(total, Math.round(r.charWidth * 70))}
+            onQuery={(query) => setFinding({ query, index: 0 })}
+            onSubmit={() => {
+              const hit = found[finding.index];
+              if (hit) setPicked(hit.ref);
+              setFinding(undefined);
+            }}
+          />
+        ) : null}
       </Column>
     </MetricsContext.Provider>
   );

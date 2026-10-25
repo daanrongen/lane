@@ -37,6 +37,8 @@ export interface UiPorts {
 
 export interface Keys {
   readonly subscribe: (onKey: (key: string) => void) => () => void;
+  // While text is being typed, keys are not commands.
+  readonly typing: (on: boolean) => void;
 }
 
 export type Scheme = "dark" | "light";

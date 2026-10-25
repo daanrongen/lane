@@ -28,33 +28,36 @@ export const AttentionStrip = ({
       {floor.attention.length === 0 ? (
         <Text tone="dim">nothing needs you</Text>
       ) : (
-        floor.attention.slice(0, MAX).map((a) => {
-          const agent = names.get(a.agent);
-          const look = stateLook(agent?.state ?? "needs-you", theme);
-          return (
-            <Button
-              key={`${a.agent}:${a.reason}:${a.since}`}
-              onClick={() => onSelect(a.agent)}
-              style={{
-                display: "flex",
-                flexDirection: "row",
-                gap: r.dot,
-                alignItems: "center",
-                paddingLeft: r.dot,
-                paddingRight: r.dot,
-                borderRadius: 4,
-                backgroundColor: alpha(look.color, 0.16),
-              }}
-            >
-              <Text style={{ color: look.color }}>
-                {`${look.glyph} ${agent?.name ?? a.agent}`}
-              </Text>
-              <Text size="small" tone="dim">
-                {`${a.reason} ${duration((now - a.since) / 1000)}`}
-              </Text>
-            </Button>
-          );
-        })
+        [...floor.attention]
+          .sort((a, b) => a.since - b.since)
+          .slice(0, MAX)
+          .map((a) => {
+            const agent = names.get(a.agent);
+            const look = stateLook(agent?.state ?? "needs-you", theme);
+            return (
+              <Button
+                key={`${a.agent}:${a.reason}:${a.since}`}
+                onClick={() => onSelect(a.agent)}
+                style={{
+                  display: "flex",
+                  flexDirection: "row",
+                  gap: r.dot,
+                  alignItems: "center",
+                  paddingLeft: r.dot,
+                  paddingRight: r.dot,
+                  borderRadius: 4,
+                  backgroundColor: alpha(look.color, 0.16),
+                }}
+              >
+                <Text style={{ color: look.color }}>
+                  {`${look.glyph} ${agent?.name ?? a.agent}`}
+                </Text>
+                <Text size="small" tone="dim">
+                  {`${a.reason} ${duration((now - a.since) / 1000)}`}
+                </Text>
+              </Button>
+            );
+          })
       )}
     </Row>
   );
