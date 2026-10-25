@@ -9,6 +9,11 @@ const KEYS: readonly (readonly [string, string])[] = [
     "/",
     "find an agent, or a file, host, MCP server, skill or model to filter the feed",
   ],
+  [
+    "h",
+    "earlier runs of the selected agent's workspace, or of all; enter replays one",
+  ],
+  ["r", "replay the selected agent from its start"],
   ["a", "show or hide sub-agents that finished a while ago"],
   ["t", "show only files several agents touched"],
   ["+ / -", "zoom the time lanes"],

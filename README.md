@@ -14,6 +14,10 @@ One view with no sub-pages: a fixed top bar, a scrolling main and a fixed contro
 - Where they work: each workspace's touched files as a tree, with agents drawn on the nodes and a mark where two agents meet on a file
 - Detail: for the selected agent, what it is doing, its context, plan and tasks, and setup, side by side
 - Feed and changes: what every agent did lately with an activity histogram, and the files edited across agents
+- Cost: spend so far where the harness totals it (Claude Code, from its cost state) in the top bar and the detail; `n/a` elsewhere
+- Up next: an idle agent's row shows the next item of its todo list, queue or goal; the machine panel lists them
+- Notifications: a macOS notification when an agent needs you, stalls, fails or finishes (`bun run live` and the binary)
+- History and replay: earlier runs of a workspace, and any run played back from its start with a playhead
 - A facet a harness cannot report shows `n/a` instead of zero
 
 ## Install
@@ -51,6 +55,9 @@ bun run live   # real local threads and processes
 | `up` / `down` | previous / next agent |
 | `n` / `N` | next / previous agent that needs attention |
 | `/` | find an agent, or a file, host, MCP server, skill or model to filter the feed (click a tree node to do the same) |
+| `t` / `a` | only shared files / also finished sub-agents |
+| `h` | history: earlier runs of the selected agent's workspace, or of all; `enter` replays one |
+| `r` | replay the selected agent from its start (`space` pause, `1` `2` `3` for 1x, 2x, 10x, `←→` seek, `0` restart, `esc` back) |
 | `+` / `-` | zoom the time lanes |
 | `esc` | clear the selection |
 | `?` | help |
@@ -60,7 +67,7 @@ bun run live   # real local threads and processes
 
 Hexagonal, under `src/`:
 
-- `domain/`: pure models and folds (thread, run, act, ref, signal, link, plan, agent state, attention, insights, file tree, floor, timeline, context, mcp, models, network, skills, task)
+- `domain/`: pure models and folds (thread, run, act, ref, signal, link, plan, agent state, attention, alerts, replay, insights, file tree, floor, timeline, context, mcp, models, network, skills, task)
 - `ports/`: Harness, RunSource, ThreadRepository, TaskRepository, Assets, ProcessProbe, Workspaces, Runtimes, SourceError
 - `adapters/`: claude, codex (reads SQLite for goals, queued prompts and spawned threads), agents, ollama (assets and the loaded-model runtime), macOS appearance, process and git workspace detection, and in-memory fakes, including a scenario that plays many harnesses' work in real time
 - `app/`: SessionsStore, Fleet (one floor of every live thread and process), Layers, the bridge to UI ports

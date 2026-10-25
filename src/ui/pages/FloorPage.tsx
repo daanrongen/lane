@@ -2,9 +2,12 @@ import { useWindowSize } from "@gpuix/react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { AgentRef } from "@/domain/ids.ts";
 import type { Task } from "@/domain/task.ts";
+import type { Thread } from "@/domain/thread.ts";
+import { baseName } from "@/domain/workspace.ts";
 import { Box, Column } from "@/ui/atoms/Box.tsx";
 import { MetricsContext, useTheme } from "@/ui/lib/context.ts";
 import { groups, order, step, stepAttention } from "@/ui/lib/fleet.ts";
+import { history } from "@/ui/lib/history.ts";
 import { useNow } from "@/ui/lib/hooks/useNow.ts";
 import { useOpened } from "@/ui/lib/hooks/useOpened.ts";
 import { useStore } from "@/ui/lib/hooks/useStore.ts";
@@ -19,9 +22,11 @@ import { DetailPanel } from "@/ui/organisms/DetailPanel.tsx";
 import { FeedPanel } from "@/ui/organisms/FeedPanel.tsx";
 import { FleetTable } from "@/ui/organisms/FleetTable.tsx";
 import { Help } from "@/ui/organisms/Help.tsx";
+import { HistoryPanel } from "@/ui/organisms/HistoryPanel.tsx";
 import { Palette } from "@/ui/organisms/Palette.tsx";
 import { TopBar } from "@/ui/organisms/TopBar.tsx";
 import { TreePanel } from "@/ui/organisms/TreePanel.tsx";
+import { ReplayPage } from "@/ui/pages/ReplayPage.tsx";
 import { PaneTemplate } from "@/ui/templates/PaneTemplate.tsx";
 
 const NO_RUN = { get: () => undefined, subscribe: () => () => {} };
@@ -42,6 +47,8 @@ export const FloorPage = ({ ports, keys }: { ports: UiPorts; keys: Keys }) => {
   const [onlyShared, setOnlyShared] = useState(false);
   const [everyone, setEveryone] = useState(false);
   const [dismissed, setDismissed] = useState("");
+  const [browsing, setBrowsing] = useState<number>();
+  const [replaying, setReplaying] = useState<Thread>();
   const [finding, setFinding] = useState<{ query: string; index: number }>();
   const r = responsive(size);
   const theme = useTheme();
@@ -81,6 +88,12 @@ export const FloorPage = ({ ports, keys }: { ports: UiPorts; keys: Keys }) => {
   const tasks = useStore(opened?.tasks ?? NO_TASKS);
   const setups = useStore(ports.setups);
 
+  const threads = useStore(ports.sessions);
+  const earlier = useMemo(
+    () => history(threads, agent?.workspace),
+    [threads, agent?.workspace],
+  );
+
   const found = useMemo(
     () => (finding ? find(floor, agents, finding.query) : []),
     [floor, agents, finding],
@@ -93,14 +106,54 @@ export const FloorPage = ({ ports, keys }: { ports: UiPorts; keys: Keys }) => {
     found,
     help,
     lens,
+    browsing,
+    replaying,
+    earlier,
+    threads,
   });
-  latest.current = { floor, agents, selected, finding, found, help, lens };
+  latest.current = {
+    floor,
+    agents,
+    selected,
+    finding,
+    found,
+    help,
+    lens,
+    browsing,
+    replaying,
+    earlier,
+    threads,
+  };
   useEffect(() => keys.typing(finding !== undefined), [keys, finding]);
   useEffect(
     () =>
       keys.subscribe((key) => {
-        const { floor, agents, selected, finding, found, help, lens } =
-          latest.current;
+        const {
+          floor,
+          agents,
+          selected,
+          finding,
+          found,
+          help,
+          lens,
+          browsing,
+          replaying,
+          earlier,
+          threads,
+        } = latest.current;
+        if (replaying) return;
+        if (browsing !== undefined) {
+          const pick = earlier[browsing];
+          if (key === "escape" || key === "h") setBrowsing(undefined);
+          if (key === "down")
+            setBrowsing(Math.min(earlier.length - 1, browsing + 1));
+          if (key === "up") setBrowsing(Math.max(0, browsing - 1));
+          if (key === "enter" && pick) {
+            setBrowsing(undefined);
+            setReplaying(pick);
+          }
+          return;
+        }
         if (finding) {
           const move = (by: number) =>
             setFinding({
@@ -120,6 +173,14 @@ export const FloorPage = ({ ports, keys }: { ports: UiPorts; keys: Keys }) => {
           return;
         }
         if (key === "?") setHelp(true);
+        if (key === "h") setBrowsing(0);
+        if (key === "r") {
+          const agent = agents.find((a) => a.ref === selected);
+          const own = threads.find(
+            (t) => t.harness === agent?.harness && t.id === agent?.thread,
+          );
+          if (own) setReplaying(own);
+        }
         if (key === "t") setOnlyShared((on) => !on);
         if (key === "a") setEveryone((on) => !on);
         if (key === "/") setFinding({ query: "", index: 0 });
@@ -142,6 +203,26 @@ export const FloorPage = ({ ports, keys }: { ports: UiPorts; keys: Keys }) => {
       }),
     [keys],
   );
+
+  if (replaying) {
+    return (
+      <Column
+        style={{
+          width: "100%",
+          height: "100%",
+          backgroundColor: theme.background,
+        }}
+      >
+        <ReplayPage
+          ports={ports}
+          thread={replaying}
+          size={size}
+          keys={keys}
+          onClose={() => setReplaying(undefined)}
+        />
+      </Column>
+    );
+  }
 
   return (
     <MetricsContext.Provider value={r}>
@@ -227,6 +308,15 @@ export const FloorPage = ({ ports, keys }: { ports: UiPorts; keys: Keys }) => {
         </PaneTemplate>
         {help ? (
           <Help width={Math.min(total, Math.round(r.charWidth * 70))} />
+        ) : null}
+        {browsing !== undefined ? (
+          <HistoryPanel
+            threads={earlier}
+            index={browsing}
+            title={agent ? baseName(agent.workspace) : "all workspaces"}
+            now={now}
+            width={Math.min(total, Math.round(r.charWidth * 70))}
+          />
         ) : null}
         {finding ? (
           <Palette

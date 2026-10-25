@@ -6,6 +6,7 @@ import { contextMap, contextUsed, laneWindow } from "@/domain/context.ts";
 import { mcpServers } from "@/domain/mcp.ts";
 import { modelsUsed } from "@/domain/models.ts";
 import { hosts } from "@/domain/network.ts";
+import { runAt } from "@/domain/replay.ts";
 import { skillsUsed } from "@/domain/skills.ts";
 import { timeline } from "@/domain/timeline.ts";
 import { Box, Row } from "@/ui/atoms/Box.tsx";
@@ -39,6 +40,7 @@ export const RunPage = ({
   size,
   zoom,
   keys,
+  playhead,
   sidebar,
   footer,
 }: {
@@ -50,13 +52,19 @@ export const RunPage = ({
   size: Size;
   zoom: number;
   keys: Keys;
+  // Seconds into the run to show it at; the live end when absent.
+  playhead?: number;
   sidebar: boolean;
   footer: ReactNode;
 }) => {
-  const run = useStore(opened.run);
+  const whole = useStore(opened.run);
   const status = useStore(opened.status);
   const now = useNow(1000);
-  const elapsed = Math.floor((now - run.startedAt) / 1000);
+  const run = useMemo(
+    () => (playhead === undefined ? whole : runAt(whole, playhead)),
+    [whole, playhead],
+  );
+  const elapsed = playhead ?? Math.floor((now - run.startedAt) / 1000);
 
   const tl = useMemo(() => timeline(run, elapsed), [run, elapsed]);
   const r = responsive(size, zoom, sidebar);
@@ -88,8 +96,8 @@ export const RunPage = ({
   useEffect(
     () =>
       keys.subscribe((key) => {
-        if (key === "l" || key === "right") setPicked((i) => i + 1);
-        if (key === "h" || key === "left") setPicked((i) => i - 1);
+        if (key === "l") setPicked((i) => i + 1);
+        if (key === "h") setPicked((i) => i - 1);
       }),
     [keys],
   );
