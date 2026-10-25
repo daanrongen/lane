@@ -23,13 +23,13 @@ import { scenario } from "@/adapters/memory/scenario/machine.ts";
 import { ollamaAssets } from "@/adapters/ollama/assets.ts";
 import { OllamaHome } from "@/adapters/ollama/OllamaHome.ts";
 import { ollamaProfile } from "@/adapters/ollama/profile.ts";
+import { RuntimesOllama } from "@/adapters/ollama/RuntimesOllama.ts";
 import { ProcessProbePs } from "@/adapters/process/ProcessProbePs.ts";
 import { WorkspacesFs } from "@/adapters/workspace/WorkspacesFs.ts";
 import { FleetLive } from "@/app/Fleet.ts";
 import { SessionsStoreLive } from "@/app/SessionsStore.ts";
 import { assetsOf } from "@/ports/Assets.ts";
 import { harness, harnessesOf } from "@/ports/Harness.ts";
-import { Runtimes } from "@/ports/Runtimes.ts";
 
 const sessionPoll = Schedule.spaced("1 second");
 
@@ -67,7 +67,7 @@ export const LiveLayer = FleetLive({ profiles: [ollamaProfile] }).pipe(
   Layer.provideMerge(liveAssets),
   Layer.provideMerge(ProcessProbePs),
   Layer.provideMerge(WorkspacesFs),
-  Layer.provideMerge(Runtimes.none),
+  Layer.provideMerge(RuntimesOllama()),
   Layer.provide(BunFileSystem.layer),
 );
 

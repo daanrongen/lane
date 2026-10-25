@@ -10,7 +10,7 @@ import { Text } from "@/ui/atoms/Text.tsx";
 import { useMetrics, useTheme } from "@/ui/lib/context.ts";
 import { harnessColor } from "@/ui/lib/look.ts";
 import { alpha } from "@/ui/lib/theme.ts";
-import { depthOf, layoutTree } from "@/ui/lib/treeLayout.ts";
+import { depthOf, layoutTree, stackTree } from "@/ui/lib/treeLayout.ts";
 
 const RECENT = 120_000;
 
@@ -34,17 +34,17 @@ const Workspace = ({
   const r = useMetrics();
   const theme = useTheme();
   const depth = depthOf(tree);
-  // Names give way before the tree runs out of width.
-  const name = Math.round(
-    Math.max(
-      r.charWidth * 4,
-      Math.min(r.charWidth * 9, (width - r.dot * 2) / depth - r.dot * 7),
-    ),
-  );
-  const label = name + r.dot * 7;
+  const wide = Math.round(r.charWidth * 9);
+  const label = wide + r.dot * 7;
+  // Too deep to grow sideways: list it, indented.
+  const stacked = depth * label > width - r.dot * 2;
+  const name = stacked ? Math.round(r.charWidth * 18) : wide;
   const frame = useMemo(
-    () => layoutTree(tree, width - r.dot * 2, r.row, label),
-    [tree, width, r.dot, r.row, label],
+    () =>
+      stacked
+        ? stackTree(tree, r.row, r.dot * 2)
+        : layoutTree(tree, width - r.dot * 2, r.row, label),
+    [tree, stacked, width, r.dot, r.row, label],
   );
   return (
     <Column>

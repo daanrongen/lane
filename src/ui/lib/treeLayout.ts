@@ -56,3 +56,18 @@ export const layoutTree = (
   place(root, 0);
   return { nodes, lines, height: Math.max(1, leaves) * row };
 };
+
+// A tree too deep to grow sideways: one row per node, each indented under its parent.
+export const stackTree = (
+  root: TreeNode,
+  row: number,
+  indent: number,
+): TreeFrame => {
+  const nodes: Placed[] = [];
+  const visit = (node: TreeNode, depth: number) => {
+    nodes.push({ node, x: depth * indent, y: nodes.length * row + row / 2 });
+    for (const c of node.children) visit(c, depth + 1);
+  };
+  visit(root, 0);
+  return { nodes, lines: [], height: nodes.length * row };
+};
