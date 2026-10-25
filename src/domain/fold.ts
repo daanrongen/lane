@@ -145,6 +145,7 @@ export const fold = (run: Run, e: RunEvent): Run => {
     case "ActUpdated":
       return mapAct(run, e.id, (a) => ({
         ...a,
+        kind: e.kind ?? a.kind,
         end: e.end ?? a.end,
         status: e.status ?? a.status,
         failure: e.failure ?? a.failure,

@@ -1,4 +1,11 @@
-import type { Act, ActStatus, Approval, Edit, Failure } from "@/domain/act.ts";
+import type {
+  Act,
+  ActKind,
+  ActStatus,
+  Approval,
+  Edit,
+  Failure,
+} from "@/domain/act.ts";
 import type { ActId, AgentId, SpanId } from "@/domain/ids.ts";
 import type { Link } from "@/domain/link.ts";
 import type { Plan, PlanStatus } from "@/domain/plan.ts";
@@ -51,6 +58,8 @@ export type RunEvent =
   | {
       readonly _tag: "ActUpdated";
       readonly id: ActId;
+      // For a call whose kind shows only in its input, like a patch run through a shell.
+      readonly kind?: ActKind;
       readonly end?: number;
       readonly status?: ActStatus;
       readonly failure?: Failure;

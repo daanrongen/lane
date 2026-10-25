@@ -12,11 +12,17 @@ import {
   sizeOf,
   tokensOf,
 } from "@/adapters/shared/sizing.ts";
+import {
+  commandRefs,
+  hostRefs,
+  touchEvents,
+} from "@/adapters/shared/touches.ts";
 import type { RunEvent } from "@/domain/events.ts";
 import { AgentId, SpanId } from "@/domain/ids.ts";
 import { mcpName } from "@/domain/mcp.ts";
 import { providerOf } from "@/domain/models.ts";
 import { type Target, targetsOfCommand } from "@/domain/network.ts";
+import { file, folder, type Ref, skill } from "@/domain/ref.ts";
 import type { Agent, Entry, Usage } from "@/domain/run.ts";
 
 export interface Spawn {
@@ -63,7 +69,32 @@ const targetsOf = (name: string, input: Json | undefined): Target[] => {
   }
 };
 
-const FILE_TOOLS = new Set(["Read", "Edit", "Write", "NotebookEdit"]);
+const FILE_TOOLS = new Set([
+  "Read",
+  "Edit",
+  "Write",
+  "MultiEdit",
+  "NotebookEdit",
+]);
+
+// What a call touches, as far as its input shows.
+const touchesOf = (
+  name: string,
+  input: Json | undefined,
+  targets: readonly Target[],
+): Ref[] => {
+  const path = str(input?.file_path) ?? str(input?.notebook_path);
+  const dir = str(input?.path);
+  return [
+    ...(FILE_TOOLS.has(name) && path ? [file(path)] : []),
+    ...(dir && (name === "Grep" || name === "Glob") ? [folder(dir)] : []),
+    ...(name === "Bash" ? commandRefs(str(input?.command)) : []),
+    ...(name === "Skill" && str(input?.skill)
+      ? [skill(String(input?.skill))]
+      : []),
+    ...hostRefs(targets),
+  ];
+};
 
 // Files are grouped by their last two directories.
 const sourceOf = (
@@ -188,7 +219,11 @@ export const makeDecoder = (cfg: DecoderConfig): Decoder => {
       ...intents(name, input, at),
     ];
     if (!SPAWN_TOOLS.has(name))
-      return [...entry, ...called(id, name, input, at)];
+      return [
+        ...entry,
+        ...called(id, name, input, at),
+        ...touchEvents(id, touchesOf(name, input, targetsOf(name, input))),
+      ];
     pending.set(id, { name, input, at });
     return [...entry, ...resolve(id, false)];
   };

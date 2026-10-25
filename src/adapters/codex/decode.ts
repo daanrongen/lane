@@ -3,12 +3,19 @@ import { arr, type Json, num, rec, str } from "@/adapters/shared/json.ts";
 import { reasonOf } from "@/adapters/shared/reason.ts";
 import { requestEvents, SEARCH_HOST } from "@/adapters/shared/requests.ts";
 import { sizeOf, tokensOf } from "@/adapters/shared/sizing.ts";
+import {
+  commandRefs,
+  hostRefs,
+  patchFiles,
+  touchEvents,
+} from "@/adapters/shared/touches.ts";
 import type { RunEvent } from "@/domain/events.ts";
 import type { AgentId } from "@/domain/ids.ts";
 import { SpanId } from "@/domain/ids.ts";
 import { mcpName } from "@/domain/mcp.ts";
 import { providerOf } from "@/domain/models.ts";
 import { targetsOfCommand } from "@/domain/network.ts";
+import { file } from "@/domain/ref.ts";
 import { type Entry, emptyUsage, type ModeChange } from "@/domain/run.ts";
 
 export interface CodexConfig {
@@ -140,10 +147,24 @@ export const makeCodexDecoder = (cfg: CodexConfig): Decoder => {
     const id = str(p.call_id) ?? str(p.id);
     if (!id) return [];
     const opened = open(id, name, label, at);
+    // A patch names its files, whether it is a tool of its own or piped through a shell.
+    const patched = patchFiles(
+      `${label}\n${typeof args === "string" ? args : ""}`,
+    );
+    const targets = targetsOfCommand(label);
     return [
       ...added(at, { kind: "Tool", label: name }, sizeOf(args)),
-      ...requestEvents(agentId, at, name, targetsOfCommand(label)),
+      ...requestEvents(agentId, at, name, targets),
       ...opened,
+      ...touchEvents(
+        id,
+        [
+          ...patched.map((f) => file(f.path)),
+          ...(patched.length || mcpName(name) ? [] : commandRefs(label)),
+          ...hostRefs(targets),
+        ],
+        patched[0] && { op: patched[0].op },
+      ),
     ];
   };
 
