@@ -126,6 +126,8 @@ export interface Floor {
   readonly feed: readonly FeedItem[];
   readonly insights: readonly Insight[];
   readonly runtimes: readonly RuntimeView[];
+  // Harnesses that could not be read; their last known agents stay.
+  readonly unreadable: readonly string[];
   readonly totals: {
     readonly states: Readonly<Record<AgentState, number>>;
     readonly usage: Usage;
@@ -333,6 +335,7 @@ export const floor = (
       ...r,
       usedBy: agents.filter((_, i) => hits[i] === r.kind).map((a) => a.ref),
     })),
+    unreadable: [],
     totals: {
       states: Object.fromEntries(
         STATES.map((s) => [s, agents.filter((a) => a.state === s).length]),

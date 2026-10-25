@@ -80,7 +80,7 @@ export const FleetLive = (options: Partial<FleetOptions> = {}) => {
   return Layer.effect(
     Fleet,
     Effect.gen(function* () {
-      const { sessions } = yield* SessionsStore;
+      const { sessions, unreadable } = yield* SessionsStore;
       const harnesses = yield* Harnesses;
       const readers = yield* Assets;
       const probe = yield* ProcessProbe;
@@ -179,7 +179,10 @@ export const FleetLive = (options: Partial<FleetOptions> = {}) => {
           ),
         );
 
-        const next = floor(at, entries, alone, yield* machine.list);
+        const next = {
+          ...floor(at, entries, alone, yield* machine.list),
+          unreadable: yield* SubscriptionRef.get(unreadable),
+        };
         const prev = yield* SubscriptionRef.get(board);
         // `at` moves every tick; only a change in what it shows is published.
         if (!isDeepStrictEqual({ ...next, at: 0 }, { ...prev, at: 0 })) {

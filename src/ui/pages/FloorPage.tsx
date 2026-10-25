@@ -39,6 +39,7 @@ export const FloorPage = ({ ports, keys }: { ports: UiPorts; keys: Keys }) => {
   const [span, setSpan] = useState(300);
   const [help, setHelp] = useState(false);
   const [lens, setLens] = useState<Lens>();
+  const [dismissed, setDismissed] = useState("");
   const [finding, setFinding] = useState<{ query: string; index: number }>();
   const r = responsive(size);
   const theme = useTheme();
@@ -139,7 +140,15 @@ export const FloorPage = ({ ports, keys }: { ports: UiPorts; keys: Keys }) => {
           header={<TopBar floor={floor} />}
           footer={<ControlsBar selected={selected !== undefined} />}
         >
-          <AttentionStrip floor={floor} now={now} onSelect={setPicked} />
+          <AttentionStrip
+            floor={floor}
+            now={now}
+            onSelect={setPicked}
+            unreadable={
+              floor.unreadable.join() === dismissed ? [] : floor.unreadable
+            }
+            onDismiss={() => setDismissed(floor.unreadable.join())}
+          />
           <Box
             style={{
               flexDirection: r.compact ? "column" : "row",

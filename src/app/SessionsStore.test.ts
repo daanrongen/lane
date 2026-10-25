@@ -74,12 +74,13 @@ describe("SessionsStore", () => {
     });
     return run(
       Effect.gen(function* () {
-        const { sessions } = yield* SessionsStore;
+        const { sessions, unreadable } = yield* SessionsStore;
         const read = SubscriptionRef.get(sessions);
         yield* until(read, (s) => s.length === 1);
         yield* Effect.sleep("60 millis");
         expect(calls).toBeGreaterThan(2);
         expect(yield* read).toHaveLength(1);
+        expect(yield* SubscriptionRef.get(unreadable)).toEqual(["claude"]);
       }),
       flaky,
     );

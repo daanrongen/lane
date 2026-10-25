@@ -15,16 +15,36 @@ export const AttentionStrip = ({
   floor,
   now,
   onSelect,
+  unreadable,
+  onDismiss,
 }: {
   floor: Floor;
   now: number;
   onSelect: (ref: AgentRef) => void;
+  // Harnesses to warn about; empty once dismissed.
+  unreadable: readonly string[];
+  onDismiss: () => void;
 }) => {
   const r = useMetrics();
   const theme = useTheme();
   const names = new Map(floor.agents.map((a) => [a.ref, a]));
   return (
     <Row gap={r.dot} style={{ height: r.row, overflow: "hidden" }}>
+      {unreadable.length > 0 ? (
+        <Button
+          onClick={onDismiss}
+          style={{
+            paddingLeft: r.dot,
+            paddingRight: r.dot,
+            borderRadius: 4,
+            backgroundColor: alpha(theme.failed, 0.16),
+          }}
+        >
+          <Text style={{ color: theme.failed }}>
+            {`⚠ ${unreadable.join(", ")} unreadable, showing the last known ×`}
+          </Text>
+        </Button>
+      ) : null}
       {floor.attention.length === 0 ? (
         <Text tone="dim">nothing needs you</Text>
       ) : (
