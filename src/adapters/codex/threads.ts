@@ -29,7 +29,7 @@ export const parseMeta = (
     : undefined;
 };
 
-// Every rollout under `sessions/YYYY/MM/DD/` is a session; titles come from Codex's own index.
+// Every rollout under `sessions/YYYY/MM/DD/` is a thread, except those another thread spawned; titles come from Codex's own index.
 export const ThreadRepositoryCodex = Layer.effect(
   ThreadRepository,
   Effect.gen(function* () {
@@ -73,6 +73,7 @@ export const ThreadRepositoryCodex = Layer.effect(
         .filter((f) => f.endsWith(".jsonl"))
         .sort()
         .slice(-MAX_SESSIONS);
+      const spawned = yield* state.spawned;
       const found = yield* Effect.forEach(
         files,
         (f) => describe(f, now, titles),
@@ -80,7 +81,10 @@ export const ThreadRepositoryCodex = Layer.effect(
           concurrency: 8,
         },
       );
-      return found.filter((s): s is Thread => s !== undefined);
+      // A spawned thread is a lane of its parent's run, not a thread of its own.
+      return found.filter(
+        (s): s is Thread => s !== undefined && !spawned.has(s.id),
+      );
     }).pipe(
       // No sessions directory just means Codex never ran.
       Effect.orElseSucceed((): readonly Thread[] => []),

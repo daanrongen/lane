@@ -79,6 +79,34 @@ describe("ThreadRepositoryCodex", () => {
       }),
     ));
 
+  test("a thread another one spawned is not listed", () =>
+    runFs(
+      Effect.gen(function* () {
+        const fs = yield* FileSystem.FileSystem;
+        const home = yield* fs.makeTempDirectoryScoped();
+        const dir = `${home}/sessions/2026/01/01`;
+        yield* fs.makeDirectory(dir, { recursive: true });
+        for (const id of ["parent", "child"]) {
+          yield* fs.writeFileString(
+            `${dir}/rollout-t-${id}.jsonl`,
+            jsonl([meta(0, id)]),
+          );
+        }
+        const db = new Database(`${home}/state_5.sqlite`);
+        db.run(
+          "create table thread_spawn_edges (parent_thread_id text, child_thread_id text, status text)",
+        );
+        db.run(
+          "insert into thread_spawn_edges values ('parent', 'child', 'open')",
+        );
+        db.close();
+
+        expect((yield* list(home)).map((t) => t.id)).toEqual([
+          ThreadId("parent"),
+        ]);
+      }),
+    ));
+
   test("no sessions directory means no sessions", () =>
     runFs(
       Effect.gen(function* () {

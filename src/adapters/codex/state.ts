@@ -25,6 +25,8 @@ export interface CodexState {
   readonly goals: (thread: string) => Effect.Effect<readonly Goal[]>;
   readonly queue: (thread: string) => Effect.Effect<readonly string[]>;
   readonly children: (thread: string) => Effect.Effect<readonly Child[]>;
+  // Every thread some other thread spawned.
+  readonly spawned: Effect.Effect<ReadonlySet<string>>;
 }
 
 const version = (name: string) =>
@@ -45,6 +47,9 @@ export const codexState = Effect.gen(function* () {
       const db = new Database(`${home}/${file}`, { readonly: true });
       try {
         return db.query(sql).all(...params) as Row[];
+      } catch {
+        // An older schema may lack the table.
+        return [] as Row[];
       } finally {
         db.close();
       }
@@ -83,6 +88,10 @@ export const codexState = Effect.gen(function* () {
         "select payload_json from queued_items where thread_id = ? order by queue_order",
         thread,
       ).pipe(Effect.map((rows) => rows.map((r) => r.payload_json))),
+    spawned: query<{ child_thread_id: string }>(
+      "state",
+      "select child_thread_id from thread_spawn_edges",
+    ).pipe(Effect.map((rows) => new Set(rows.map((r) => r.child_thread_id)))),
     children: (thread) =>
       query<{ child_thread_id: string; status: string }>(
         "state",
