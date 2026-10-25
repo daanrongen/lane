@@ -143,6 +143,16 @@ describe("makeDecoder", () => {
     });
   });
 
+  test("the handback's result finishes the agent after its last event", () => {
+    const d = makeDecoder(cfg);
+    d.push(assistant(2, "m1", [toolUse("t1", "SubagentHandback")]));
+    expect(d.push(result(3, "t1"))).toContainEqual({
+      _tag: "AgentFinished",
+      agentId: main,
+      at: 3,
+    });
+  });
+
   test("end closes dangling spans and finishes the agent", () => {
     const d = makeDecoder(cfg);
     d.push(assistant(1, "m1", [toolUse("t1", "Bash")]));
