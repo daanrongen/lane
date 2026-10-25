@@ -52,6 +52,31 @@ describe("claude task decoder", () => {
     ]);
   });
 
+  test("TaskCreate and TaskUpdate yield one doing and the rest next", () => {
+    const decode = makeTaskDecoder(origin);
+    const create = (s: number, subject: string) =>
+      assistant(s, `m${s}`, [toolUse(`t${s}`, "TaskCreate", { subject })]);
+    decode(create(1, "a"));
+    decode(create(2, "b"));
+    decode(create(3, "c"));
+    const next = decode(
+      assistant(4, "m4", [
+        toolUse("t4", "TaskUpdate", { taskId: "1", status: "in_progress" }),
+      ]),
+    );
+    expect(next?.map((t) => [t.title, t.status])).toEqual([
+      ["a", "doing"],
+      ["b", "next"],
+      ["c", "next"],
+    ]);
+    const done = decode(
+      assistant(5, "m5", [
+        toolUse("t5", "TaskUpdate", { taskId: "2", status: "deleted" }),
+      ]),
+    );
+    expect(done?.map((t) => t.title)).toEqual(["a", "c"]);
+  });
+
   test("the prompt queue shows typed prompts and ignores sub-agent hand-backs", () => {
     const decode = makeTaskDecoder(origin);
     decode(queue(1, "enqueue", "<agent-message>done"));

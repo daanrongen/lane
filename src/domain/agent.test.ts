@@ -246,4 +246,15 @@ describe("next", () => {
     expect(summarise(run, tasks.slice(0, 2))[0]?.next).toBe("docs");
     expect(summarise(run, tasks.slice(1, 2))[0]?.next).toBeUndefined();
   });
+
+  test("with one doing and several pending, next is the first pending and progress counts all", () => {
+    const tasks = [
+      t("todo", "a", "doing"),
+      t("todo", "b", "next"),
+      t("todo", "c", "next"),
+    ];
+    const s = summarise(run, tasks)[0];
+    expect(s?.next).toBe("b");
+    expect(s?.progress).toEqual({ done: 0, total: 3 });
+  });
 });
