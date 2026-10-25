@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { Box } from "@/ui/atoms/Box.tsx";
 import { Rule } from "@/ui/atoms/Rule.tsx";
-import { useMetrics, useTheme } from "@/ui/lib/context.ts";
+import { useTheme } from "@/ui/lib/context.ts";
 import type { Frame } from "@/ui/lib/layout.ts";
 import { alpha, laneColor } from "@/ui/lib/theme.ts";
 import { Bar } from "@/ui/molecules/Bar.tsx";
@@ -10,7 +10,6 @@ import { RequestMark } from "@/ui/molecules/RequestMark.tsx";
 import { SkillMark } from "@/ui/molecules/SkillMark.tsx";
 
 export const TimelinePlot = ({ frame }: { frame: Frame }) => {
-  const r = useMetrics();
   const theme = useTheme();
   const names = useMemo(
     () => new Map(frame.rows.map((r) => [r.lane.agent.id, r.lane.agent.name])),
@@ -20,7 +19,7 @@ export const TimelinePlot = ({ frame }: { frame: Frame }) => {
     <Box
       style={{
         position: "relative",
-        width: r.plotWidth,
+        width: frame.width,
         height: frame.height,
         flexShrink: 0,
       }}

@@ -12,7 +12,9 @@ import {
 import { duration } from "@/ui/lib/format.ts";
 
 export interface Metrics {
+  // The visible window; a longer run scrolls past it.
   readonly plotWidth: number;
+  readonly pxPerSecond: number;
   readonly rowHeight: number;
   readonly barHeight: number;
   readonly tickEvery: number;
@@ -81,6 +83,7 @@ export interface Frame {
   readonly gridlines: readonly number[];
   readonly gaps: readonly Box[];
   readonly labels: readonly AxisLabel[];
+  readonly width: number;
   readonly height: number;
 }
 
@@ -140,9 +143,10 @@ const declutter = (
 };
 
 export const layout = (tl: Timeline, axis: Axis, m: Metrics): Frame => {
+  const width = Math.max(m.plotWidth, axis.total * m.pxPerSecond);
   const scale = scaleLinear()
     .domain([0, Math.max(axis.total, 1)])
-    .range([0, m.plotWidth]);
+    .range([0, width]);
   const xOf = (t: number) => scale(axis.at(t));
   const height = tl.lanes.length * m.rowHeight;
   const rowOf = new Map(tl.lanes.map((l, i) => [l.agent.id, i]));
@@ -214,7 +218,7 @@ export const layout = (tl: Timeline, axis: Axis, m: Metrics): Frame => {
   const inGap = (d: number) =>
     axis.gaps.some((g) => d >= g.at && d <= g.at + g.shown);
   const tickValues = scale
-    .ticks(Math.max(2, Math.floor(m.plotWidth / m.tickEvery)))
+    .ticks(Math.max(2, Math.floor(width / m.tickEvery)))
     .filter((d) => !inGap(d));
 
   const gaps = axis.gaps.map(
@@ -244,7 +248,7 @@ export const layout = (tl: Timeline, axis: Axis, m: Metrics): Frame => {
       ),
     ],
     m.charWidth,
-    m.plotWidth,
+    width,
   );
 
   const posture = tl.posture.map((span): PostureBox => {
@@ -259,6 +263,7 @@ export const layout = (tl: Timeline, axis: Axis, m: Metrics): Frame => {
     gridlines: tickValues.map(scale),
     gaps,
     labels,
+    width,
     height,
   };
 };

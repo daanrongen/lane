@@ -65,12 +65,22 @@ export const RunPage = ({
     () =>
       layout(tl, axis, {
         plotWidth: r.plotWidth,
+        pxPerSecond: r.pxPerSecond,
         rowHeight: r.rowHeight,
         barHeight: r.barHeight,
         tickEvery: r.tickEvery,
         charWidth: r.charWidth,
       }),
-    [tl, axis, r.plotWidth, r.rowHeight, r.barHeight, r.tickEvery, r.charWidth],
+    [
+      tl,
+      axis,
+      r.plotWidth,
+      r.pxPerSecond,
+      r.rowHeight,
+      r.barHeight,
+      r.tickEvery,
+      r.charWidth,
+    ],
   );
 
   const [picked, setPicked] = useState(0);

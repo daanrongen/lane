@@ -11,6 +11,7 @@ export interface Responsive {
   readonly sidebar: number;
   readonly labels: number;
   readonly plotWidth: number;
+  readonly pxPerSecond: number;
   readonly rowHeight: number;
   readonly barHeight: number;
   readonly contextHeight: number;
@@ -56,6 +57,7 @@ export const responsive = (
     sidebar,
     labels,
     plotWidth: Math.max(160, inner - labels),
+    pxPerSecond: 2 * zoom,
     rowHeight: px(44),
     barHeight: px(22),
     contextHeight: px(130),
