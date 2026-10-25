@@ -33,6 +33,11 @@ export const mcp = (server: string, tool?: string): Ref => ({
   tool,
 });
 export const skill = (name: string): Ref => ({ _tag: "Skill", name });
+export const subject = (kind: SubjectKind, id: string): Ref => ({
+  _tag: "Subject",
+  kind,
+  id,
+});
 export const command = (program: string): Ref => ({ _tag: "Command", program });
 
 // Two refs name the same thing exactly when their keys match.

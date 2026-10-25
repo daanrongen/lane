@@ -16,6 +16,7 @@ import {
   commandRefs,
   hostRefs,
   shellWrites,
+  subjectRefs,
   touchEvents,
 } from "@/adapters/shared/touches.ts";
 import type { Approval, Edit } from "@/domain/act.ts";
@@ -24,7 +25,7 @@ import { ActId, AgentId, SpanId } from "@/domain/ids.ts";
 import { mcpName } from "@/domain/mcp.ts";
 import { providerOf } from "@/domain/models.ts";
 import { type Target, targetsOfCommand } from "@/domain/network.ts";
-import { file, folder, type Ref, skill } from "@/domain/ref.ts";
+import { file, folder, type Ref, skill, subject } from "@/domain/ref.ts";
 import type { Agent, Entry, Usage } from "@/domain/run.ts";
 
 export interface Spawn {
@@ -98,6 +99,16 @@ const touchesOf = (
       ? [skill(String(input?.skill))]
       : []),
     ...hostRefs(targets),
+    ...subjectRefs(
+      name === "Bash"
+        ? str(input?.command)
+        : name === "WebFetch"
+          ? str(input?.url)
+          : mcpName(name)
+            ? JSON.stringify(input)
+            : undefined,
+      mcpName(name) !== undefined,
+    ),
   ];
 };
 
@@ -160,6 +171,7 @@ export const makeDecoder = (cfg: DecoderConfig): Decoder => {
   const spans = new Map<string, boolean>(); // tool_use id -> closed
   const sources = new Map<string, Pick<Entry, "kind" | "label">>();
   const plans = new Set<string>();
+  let lastCall: string | undefined;
   let permission: string | undefined;
   let effort: string | undefined;
   let announced = false;
@@ -256,6 +268,7 @@ export const makeDecoder = (cfg: DecoderConfig): Decoder => {
       ...requestEvents(agentId, at, name, targetsOf(name, input)),
       ...intents(name, input, at),
     ];
+    if (!SPAWN_TOOLS.has(name)) lastCall = id;
     if (!SPAWN_TOOLS.has(name))
       return [
         ...entry,
@@ -482,6 +495,14 @@ export const makeDecoder = (cfg: DecoderConfig): Decoder => {
       if (type === "system") {
         return line.subtype === "compact_boundary"
           ? [{ _tag: "ContextCompacted", agentId, at }]
+          : [];
+      }
+      // A pull request the agent made, written after the call that made it.
+      if (line.type === "pr-link" && lastCall) {
+        const repo = str(line.prRepository);
+        const n = num(line.prNumber);
+        return n
+          ? touchEvents(lastCall, [subject("pr", `${repo ? repo : ""}#${n}`)])
           : [];
       }
       if (type === "attachment") {

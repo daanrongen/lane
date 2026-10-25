@@ -8,7 +8,11 @@ import {
 } from "@/adapters/claude/fixtures.ts";
 import { makeCodexDecoder } from "@/adapters/codex/decode.ts";
 import { call, meta } from "@/adapters/codex/fixtures.ts";
-import { patchFiles, shellWrites } from "@/adapters/shared/touches.ts";
+import {
+  patchFiles,
+  shellWrites,
+  subjectRefs,
+} from "@/adapters/shared/touches.ts";
 import type { RunEvent } from "@/domain/events.ts";
 import { foldAll } from "@/domain/fold.ts";
 import { AgentId, ThreadId } from "@/domain/ids.ts";
@@ -141,5 +145,57 @@ describe("shellWrites", () => {
     ]);
     expect(act?.kind).toBe("edit");
     expect(act?.touches).toContainEqual({ _tag: "File", path: "src/a.ts" });
+  });
+});
+
+describe("subjectRefs", () => {
+  test("github urls and gh commands name pull requests and issues", () => {
+    expect(
+      subjectRefs(
+        "see https://github.com/acme/api/pull/12 and gh issue view 482",
+      ),
+    ).toEqual([
+      { _tag: "Subject", kind: "pr", id: "acme/api#12" },
+      { _tag: "Subject", kind: "issue", id: "#482" },
+    ]);
+  });
+
+  test("ticket ids count only where asked, and repeats collapse", () => {
+    expect(subjectRefs("fix ENG-12 UTF-8")).toEqual([]);
+    expect(subjectRefs("ENG-12 ENG-12 UTF-8", true)).toEqual([
+      { _tag: "Subject", kind: "ticket", id: "ENG-12" },
+    ]);
+  });
+
+  test("a claude shell call that opens an issue touches it", () => {
+    const [act] = claude([
+      assistant(1, "m1", [
+        toolUse("t1", "Bash", { command: "gh issue view 482" }),
+      ]),
+      result(2, "t1"),
+    ]);
+    expect(act?.touches).toContainEqual({
+      _tag: "Subject",
+      kind: "issue",
+      id: "#482",
+    });
+  });
+
+  test("a pr-link line attaches the pull request to the call before it", () => {
+    const [act] = claude([
+      assistant(1, "m1", [toolUse("t1", "Bash", { command: "gh pr create" })]),
+      result(2, "t1"),
+      {
+        type: "pr-link",
+        timestamp: new Date(origin + 3000).toISOString(),
+        prNumber: 1,
+        prRepository: "acme/lane",
+      },
+    ]);
+    expect(act?.touches).toContainEqual({
+      _tag: "Subject",
+      kind: "pr",
+      id: "acme/lane#1",
+    });
   });
 });

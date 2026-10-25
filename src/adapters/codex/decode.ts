@@ -8,6 +8,7 @@ import {
   hostRefs,
   patchFiles,
   shellWrites,
+  subjectRefs,
   touchEvents,
 } from "@/adapters/shared/touches.ts";
 import type { RunEvent } from "@/domain/events.ts";
@@ -174,6 +175,12 @@ export const makeCodexDecoder = (cfg: CodexConfig): Decoder => {
           ...written.map((p) => file(p)),
           ...(patched.length || mcpName(name) ? [] : commandRefs(label)),
           ...hostRefs(targets),
+          ...(mcpName(name)
+            ? subjectRefs(
+                typeof args === "string" ? args : JSON.stringify(args),
+                true,
+              )
+            : subjectRefs(label)),
         ],
         patched[0]
           ? { op: patched[0].op }
