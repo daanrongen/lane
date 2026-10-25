@@ -124,6 +124,12 @@ const Now = ({
   );
 };
 
+// Steps and tasks shown before the rest are counted.
+const PLAN_ROWS = 5;
+
+// What is underway comes first, so a long list ends with what is done.
+const ORDER = { doing: 0, next: 1, done: 2 } as const;
+
 const GLYPH = { done: "✓", doing: "●", next: "○" } as const;
 
 const Plan = ({
@@ -138,29 +144,41 @@ const Plan = ({
   const r = useMetrics();
   const id = agentOf(agent.ref);
   const plan = run.plans.findLast((p) => p.agentId === id);
-  const own = tasks.filter((t) => t.owner === id);
+  const own = tasks
+    .filter((t) => t.owner === id)
+    .sort((a, b) => ORDER[a.status] - ORDER[b.status]);
   return (
     <Column gap={Math.round(r.dot / 2)}>
       <Heading>PLAN</Heading>
       {plan ? (
         <>
-          <Text size="small">{`${plan.title} (${plan.status})`}</Text>
-          {plan.steps.map((s) => (
+          <Text size="small">{`${clip(plan.title, 60)} (${plan.status})`}</Text>
+          {plan.steps.slice(0, PLAN_ROWS).map((s) => (
             <Text key={s} size="small" tone="dim">
-              {`· ${s}`}
+              {`· ${clip(s, 60)}`}
             </Text>
           ))}
+          {plan.steps.length > PLAN_ROWS ? (
+            <Text size="small" tone="dim">
+              {`+${plan.steps.length - PLAN_ROWS} more steps`}
+            </Text>
+          ) : null}
         </>
       ) : null}
-      {own.map((t) => (
+      {own.slice(0, PLAN_ROWS).map((t) => (
         <Text
           key={t.id}
           size="small"
           tone={t.status === "done" ? "dim" : "text"}
         >
-          {`${GLYPH[t.status]} ${t.title}`}
+          {`${GLYPH[t.status]} ${clip(t.title, 60)}`}
         </Text>
       ))}
+      {own.length > PLAN_ROWS ? (
+        <Text size="small" tone="dim">
+          {`+${own.length - PLAN_ROWS} more tasks`}
+        </Text>
+      ) : null}
       {!plan && own.length === 0 ? (
         <Text size="small" tone="dim">
           nothing reported
