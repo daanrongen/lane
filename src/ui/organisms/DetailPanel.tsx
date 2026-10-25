@@ -294,13 +294,15 @@ export const DetailPanel = ({
           <Plan run={run} agent={agent} />
           <Tasks agent={agent} tasks={tasks} />
         </Column>
-        <Column gap={r.pad} style={{ width: col }}>
+        <Column gap={Math.round(r.dot / 2)} style={{ width: col }}>
           <Heading>SETUP</Heading>
-          <McpServers servers={mcpServers(run.setups, run.spans)} />
-          <UsageRow title="SKILLS" chips={skills} />
-          <NetworkHosts
-            hosts={hosts(run.requests.filter((q) => q.agentId === id))}
-          />
+          <Column gap={r.pad}>
+            <McpServers servers={mcpServers(run.setups, run.spans)} />
+            <UsageRow title="SKILLS" chips={skills} />
+            <NetworkHosts
+              hosts={hosts(run.requests.filter((q) => q.agentId === id))}
+            />
+          </Column>
         </Column>
       </Row>
     </Column>

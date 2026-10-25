@@ -28,7 +28,7 @@ export const ContextMap = ({
   const percent = Math.round((map.used / map.window) * 100);
 
   return (
-    <Box style={{ flexDirection: "column", gap: Math.round(r.pad / 2) }}>
+    <Box style={{ flexDirection: "column", gap: Math.round(r.dot / 2) }}>
       <Row justify="space-between">
         <Row gap={r.dot}>
           <Text>Context</Text>
