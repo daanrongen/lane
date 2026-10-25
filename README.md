@@ -4,6 +4,8 @@ A native, GPU-rendered operations view of every AI agent running on your machine
 
 It follows Claude Code and Codex threads and the processes behind them (plus the models a local Ollama server has loaded, and the agents and Ollama asset homes) and shows them in one view. It follows the macOS light/dark appearance.
 
+Besides the app, `lane` has read-only [commands](#commands) for scripts and quick checks, such as `lane threads ls` and `lane tasks ls`.
+
 ## What it shows
 
 One view with no sub-pages: a fixed top bar, a scrolling main and a fixed controls bar.
@@ -50,7 +52,34 @@ Read-only queries that print and exit, without opening the app. Output is a tabl
 | `lane agents ls` / `show <agent>` | every agent with state, model, context fill, cost and what it is doing now |
 | `lane attention` | who needs you, is stalled or failed (`--exit-code` exits 1 when anyone does) |
 
-A `<thread>` is an id, `harness:id`, an id prefix, a directory or part of a name. `lane <command> --help` lists the filters (`--harness`, `-w`, `-n`, `--all`, ...) and `lane --completions zsh` prints shell completions.
+A `<thread>` is an id, `harness:id`, an id prefix, a directory or part of a name. An `<agent>` is a full or partial `harness:thread:agent` ref, or a name.
+
+Options shared by the listing commands:
+
+| Flag | Meaning |
+| --- | --- |
+| `--harness <id>` | only `claude`, `codex`, ... |
+| `-w`, `--workspace <path>` | only this directory and below |
+| `-n`, `--limit <rows>` | most rows (`threads ls` shows 30 by default) |
+| `--all` | every thread, not just live and recent ones |
+| `--no-probe` | do not look at running processes |
+| `--no-header` | leave the header row out of a table |
+
+Each command adds its own filters: `threads ls` takes `--live`, `--past`, `--status` and `--since 2h`; `tasks ls` takes `--status doing|next|done|any`, `--source` and `--owner`; `agents ls` takes `--state`. Run `lane <command> --help` for the full list.
+
+```sh
+lane status --line                          # 1 working · 2 done · 108k out · $4.12
+lane threads ls --live -w .                 # live threads in this directory
+lane tasks ls .                             # doing and next, for the newest thread here
+lane agents ls --state stalled --json | jq  # machine-readable
+lane attention --exit-code || notify-send   # exit 1 when anyone needs you
+```
+
+Tasks list what an agent is doing now and what is lined up next, including work handed to sub-agents. Without a thread, `tasks ls` covers every live and recent one; done tasks appear with `--status done` or `any`.
+
+JSON carries raw values (epoch milliseconds, numbers, enums) under snake_case keys, never display strings like `3m`. Data goes to stdout and errors to stderr. Exit codes: `0` ok, `1` error, `2` bad usage, `3` no match or an ambiguous one.
+
+Shell completions: `lane --completions zsh` (also `bash` and `fish`).
 
 ## From source
 
