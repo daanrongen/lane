@@ -1,4 +1,4 @@
-import type { AgentId, SessionId, SpanId } from "@/domain/ids.ts";
+import type { AgentId, SpanId, ThreadId } from "@/domain/ids.ts";
 
 export interface Usage {
   readonly input: number;
@@ -128,7 +128,7 @@ export interface Setup {
 
 // Times are seconds from startedAt (epoch ms).
 export interface Run {
-  readonly sessionId: SessionId;
+  readonly threadId: ThreadId;
   readonly startedAt: number;
   readonly agents: readonly Agent[];
   readonly spans: readonly Span[];
@@ -142,8 +142,8 @@ export interface Run {
   readonly modes: readonly ModeChange[];
 }
 
-export const emptyRun = (sessionId: SessionId, startedAt: number): Run => ({
-  sessionId,
+export const emptyRun = (threadId: ThreadId, startedAt: number): Run => ({
+  threadId,
   startedAt,
   agents: [],
   spans: [],

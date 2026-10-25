@@ -1,4 +1,4 @@
-import type { Session } from "@/domain/session.ts";
+import type { Thread } from "@/domain/thread.ts";
 import { Column, Row } from "@/ui/atoms/Box.tsx";
 import { Dot } from "@/ui/atoms/Dot.tsx";
 import { Tag } from "@/ui/atoms/Tag.tsx";
@@ -13,7 +13,7 @@ export const SessionRow = ({
   selected,
   now,
 }: {
-  session: Session;
+  session: Thread;
   selected: boolean;
   now: number;
 }) => {

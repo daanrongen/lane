@@ -4,16 +4,16 @@ import { ClaudeHome } from "@/adapters/claude/ClaudeHome.ts";
 import { runFs } from "@/adapters/claude/fixtures.ts";
 import {
   parseSession,
-  SessionRepositoryFs,
   summarize,
-} from "@/adapters/claude/SessionRepositoryFs.ts";
-import { SessionId } from "@/domain/ids.ts";
-import { SessionRepository } from "@/ports/SessionRepository.ts";
+  ThreadRepositoryFs,
+} from "@/adapters/claude/ThreadRepositoryFs.ts";
+import { ThreadId } from "@/domain/ids.ts";
+import { ThreadRepository } from "@/ports/ThreadRepository.ts";
 
 const entry = (pid: number, extra = {}) =>
   JSON.stringify({
     pid,
-    sessionId: `s${pid}`,
+    threadId: `s${pid}`,
     cwd: "/x",
     status: "busy",
     updatedAt: 5,
@@ -24,7 +24,7 @@ describe("parseSession", () => {
   test("maps the registry file", () => {
     expect(parseSession(JSON.parse(entry(1, { name: "n" })))).toEqual({
       harness: "claude",
-      id: SessionId("s1"),
+      id: ThreadId("s1"),
       cwd: "/x",
       pid: 1,
       status: "busy",
@@ -42,7 +42,7 @@ describe("parseSession", () => {
   });
 });
 
-describe("SessionRepositoryFs", () => {
+describe("ThreadRepositoryFs", () => {
   test("lists live sessions and skips dead or malformed entries", () =>
     runFs(
       Effect.gen(function* () {
@@ -54,13 +54,13 @@ describe("SessionRepositoryFs", () => {
         yield* fs.writeFileString(`${home}/sessions/3.json`, "{nope");
         yield* fs.writeFileString(`${home}/sessions/1.abc.key`, "secret");
 
-        const catalog = SessionRepositoryFs((pid) => pid === 1).pipe(
+        const catalog = ThreadRepositoryFs((pid) => pid === 1).pipe(
           Layer.provide(ClaudeHome.layer(home)),
         );
-        const sessions = yield* SessionRepository.use((c) => c.list).pipe(
+        const sessions = yield* ThreadRepository.use((c) => c.list).pipe(
           Effect.provide(catalog),
         );
-        expect(sessions.map((s) => s.id)).toEqual([SessionId("s1")]);
+        expect(sessions.map((s) => s.id)).toEqual([ThreadId("s1")]);
       }),
     ));
 });
@@ -77,11 +77,11 @@ describe("summarize", () => {
   });
 });
 
-describe("SessionRepositoryFs history", () => {
+describe("ThreadRepositoryFs history", () => {
   const run = (home: string, alive: (pid: number) => boolean) =>
-    SessionRepository.use((c) => c.list).pipe(
+    ThreadRepository.use((c) => c.list).pipe(
       Effect.provide(
-        SessionRepositoryFs(alive).pipe(Layer.provide(ClaudeHome.layer(home))),
+        ThreadRepositoryFs(alive).pipe(Layer.provide(ClaudeHome.layer(home))),
       ),
     );
 
@@ -93,7 +93,7 @@ describe("SessionRepositoryFs history", () => {
         yield* fs.makeDirectory(`${home}/projects/-x`, { recursive: true });
         yield* fs.makeDirectory(`${home}/sessions`, { recursive: true });
         const lines = (title: string) =>
-          `${JSON.stringify({ type: "user", cwd: "/x", sessionId: "s" })}\n${JSON.stringify({ type: "ai-title", aiTitle: title })}\n`;
+          `${JSON.stringify({ type: "user", cwd: "/x", threadId: "s" })}\n${JSON.stringify({ type: "ai-title", aiTitle: title })}\n`;
         yield* fs.writeFileString(
           `${home}/projects/-x/s1.jsonl`,
           lines("past one"),
@@ -104,7 +104,7 @@ describe("SessionRepositoryFs history", () => {
         );
         yield* fs.writeFileString(
           `${home}/sessions/7.json`,
-          entry(7, { sessionId: "s7", cwd: "/x" }),
+          entry(7, { threadId: "s7", cwd: "/x" }),
         );
 
         const sessions = yield* run(home, (pid) => pid === 7);

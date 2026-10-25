@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { AgentId, SessionId, SpanId } from "@/domain/ids.ts";
+import { AgentId, SpanId, ThreadId } from "@/domain/ids.ts";
 import {
   type Agent,
   emptyRun,
@@ -32,7 +32,7 @@ const tool = (
 });
 
 const run: Run = {
-  ...emptyRun(SessionId("s"), 0),
+  ...emptyRun(ThreadId("s"), 0),
   // Spawn order is deliberately not tree order.
   agents: [
     agent("main", null),
@@ -97,7 +97,7 @@ describe("timeline", () => {
   });
 
   test("empty run is zero-length", () => {
-    expect(timeline(emptyRun(SessionId("e"), 0), 0).duration).toBe(0);
+    expect(timeline(emptyRun(ThreadId("e"), 0), 0).duration).toBe(0);
   });
 });
 
@@ -113,7 +113,7 @@ const waiting = (id: string, start: number, end: number): Span => ({
 
 describe("timeline lanes", () => {
   const base = {
-    ...emptyRun(SessionId("s"), 0),
+    ...emptyRun(ThreadId("s"), 0),
     agents: [agent("main", null)],
   };
 

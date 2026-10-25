@@ -7,18 +7,18 @@ import { ClaudeHome } from "@/adapters/claude/ClaudeHome.ts";
 import { RunSourceFs } from "@/adapters/claude/RunSourceFs.ts";
 import {
   processAlive,
-  SessionRepositoryFs,
-} from "@/adapters/claude/SessionRepositoryFs.ts";
+  ThreadRepositoryFs,
+} from "@/adapters/claude/ThreadRepositoryFs.ts";
 import { TaskRepositoryFs } from "@/adapters/claude/tasks.ts";
 import { codexAssets } from "@/adapters/codex/assets.ts";
 import { CodexHome } from "@/adapters/codex/CodexHome.ts";
 import { RunSourceCodex } from "@/adapters/codex/runs.ts";
-import { SessionRepositoryCodex } from "@/adapters/codex/sessions.ts";
 import { TaskRepositoryCodex } from "@/adapters/codex/tasks.ts";
+import { ThreadRepositoryCodex } from "@/adapters/codex/threads.ts";
 import { assetReaderMemory } from "@/adapters/memory/AssetReaderMemory.ts";
 import { RunSourceMemory } from "@/adapters/memory/RunSourceMemory.ts";
-import { SessionRepositoryMemory } from "@/adapters/memory/SessionRepositoryMemory.ts";
 import { TaskRepositoryMemory } from "@/adapters/memory/TaskRepositoryMemory.ts";
+import { ThreadRepositoryMemory } from "@/adapters/memory/ThreadRepositoryMemory.ts";
 import { ollamaAssets } from "@/adapters/ollama/assets.ts";
 import { OllamaHome } from "@/adapters/ollama/OllamaHome.ts";
 import {
@@ -39,7 +39,7 @@ const sessionPoll = Schedule.spaced("1 second");
 const claude = harness(
   "claude",
   Layer.mergeAll(
-    SessionRepositoryFs(processAlive),
+    ThreadRepositoryFs(processAlive),
     RunSourceFs(Schedule.spaced("500 millis")),
     TaskRepositoryFs(Schedule.spaced("500 millis")),
   ).pipe(Layer.provide(ClaudeHome.default)),
@@ -48,7 +48,7 @@ const claude = harness(
 const codex = harness(
   "codex",
   Layer.mergeAll(
-    SessionRepositoryCodex,
+    ThreadRepositoryCodex,
     RunSourceCodex(Schedule.spaced("500 millis")),
     TaskRepositoryCodex(Schedule.spaced("500 millis")),
   ).pipe(Layer.provide(CodexHome.default)),
@@ -71,7 +71,7 @@ export const LiveLayer = SessionsStoreLive(sessionPoll).pipe(
 const demoClaude = harness(
   "claude",
   Layer.mergeAll(
-    SessionRepositoryMemory(() => [demoSession]),
+    ThreadRepositoryMemory(() => [demoSession]),
     RunSourceMemory({ [demoSession.id]: demoEvents }),
     TaskRepositoryMemory({ [demoSession.id]: demoTasks }),
   ),
@@ -80,7 +80,7 @@ const demoClaude = harness(
 const demoCodex = harness(
   "codex",
   Layer.mergeAll(
-    SessionRepositoryMemory(() => [demoCodexSession]),
+    ThreadRepositoryMemory(() => [demoCodexSession]),
     RunSourceMemory({ [demoCodexSession.id]: demoCodexEvents }),
     TaskRepositoryMemory({ [demoCodexSession.id]: demoCodexTasks }),
   ),

@@ -1,13 +1,13 @@
 import { describe, expect, test } from "bun:test";
 import { Effect, Layer, type Scope, SubscriptionRef } from "effect";
 import { RunSourceMemory } from "@/adapters/memory/RunSourceMemory.ts";
-import { SessionRepositoryMemory } from "@/adapters/memory/SessionRepositoryMemory.ts";
 import { TaskRepositoryMemory } from "@/adapters/memory/TaskRepositoryMemory.ts";
+import { ThreadRepositoryMemory } from "@/adapters/memory/ThreadRepositoryMemory.ts";
 import { demoEvents, demoSession, demoTasks } from "@/app/demo.ts";
 import { openRun } from "@/app/openRun.ts";
 import { until } from "@/app/testing.ts";
 import { foldAll } from "@/domain/fold.ts";
-import { SessionId } from "@/domain/ids.ts";
+import { ThreadId } from "@/domain/ids.ts";
 import { emptyRun } from "@/domain/run.ts";
 import { type Harnesses, harness, harnessesOf } from "@/ports/Harness.ts";
 
@@ -16,7 +16,7 @@ const source = harnessesOf(
   harness(
     "claude",
     Layer.mergeAll(
-      SessionRepositoryMemory(() => [demoSession]),
+      ThreadRepositoryMemory(() => [demoSession]),
       RunSourceMemory({ [id]: demoEvents }),
       TaskRepositoryMemory({ [id]: demoTasks }),
     ),
@@ -47,7 +47,7 @@ describe("openRun", () => {
   test("an unknown session is marked failed", () =>
     run(
       Effect.gen(function* () {
-        const open = yield* openRun({ ...demoSession, id: SessionId("nope") });
+        const open = yield* openRun({ ...demoSession, id: ThreadId("nope") });
         const status = yield* until(
           SubscriptionRef.get(open.status),
           (s) => s !== "reading",

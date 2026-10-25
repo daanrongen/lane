@@ -1,19 +1,19 @@
 import { describe, expect, test } from "bun:test";
 import { Effect, Layer, Schedule, SubscriptionRef } from "effect";
 import { RunSourceMemory } from "@/adapters/memory/RunSourceMemory.ts";
-import { SessionRepositoryMemory } from "@/adapters/memory/SessionRepositoryMemory.ts";
 import { TaskRepositoryMemory } from "@/adapters/memory/TaskRepositoryMemory.ts";
+import { ThreadRepositoryMemory } from "@/adapters/memory/ThreadRepositoryMemory.ts";
 import { SessionsStore, SessionsStoreLive } from "@/app/SessionsStore.ts";
 import { until } from "@/app/testing.ts";
-import { SessionId } from "@/domain/ids.ts";
-import type { Session } from "@/domain/session.ts";
+import { ThreadId } from "@/domain/ids.ts";
+import type { Thread } from "@/domain/thread.ts";
 import { harness, harnessesOf } from "@/ports/Harness.ts";
-import { SessionRepository } from "@/ports/SessionRepository.ts";
 import { SourceError } from "@/ports/SourceError.ts";
+import { ThreadRepository } from "@/ports/ThreadRepository.ts";
 
-const session = (id: string): Session => ({
+const session = (id: string): Thread => ({
   harness: "claude",
-  id: SessionId(id),
+  id: ThreadId(id),
   cwd: "/x",
   pid: 1,
   status: "idle",
@@ -23,7 +23,7 @@ const session = (id: string): Session => ({
 const poll = Schedule.spaced("10 millis");
 const run = <A, E>(
   self: Effect.Effect<A, E, SessionsStore>,
-  catalog: Layer.Layer<SessionRepository>,
+  catalog: Layer.Layer<ThreadRepository>,
 ) =>
   Effect.runPromise(
     self.pipe(
@@ -57,15 +57,15 @@ describe("SessionsStore", () => {
         yield* until(read, (s) => s.length === 1);
         current = [session("a"), session("b")];
         const seen = yield* until(read, (s) => s.length === 2);
-        expect(seen.map((s) => s.id)).toEqual([SessionId("a"), SessionId("b")]);
+        expect(seen.map((s) => s.id)).toEqual([ThreadId("a"), ThreadId("b")]);
       }),
-      SessionRepositoryMemory(() => current),
+      ThreadRepositoryMemory(() => current),
     );
   });
 
   test("a failed poll keeps the last known sessions", () => {
     let calls = 0;
-    const flaky = Layer.succeed(SessionRepository, {
+    const flaky = Layer.succeed(ThreadRepository, {
       list: Effect.suspend(() =>
         ++calls === 1
           ? Effect.succeed([session("a")])
@@ -89,11 +89,11 @@ describe("SessionsStore", () => {
 describe("SessionsStore across harnesses", () => {
   test("merges every harness, newest first", () => {
     const codex = { ...session("c"), harness: "codex", updatedAt: 9 } as const;
-    const of = (s: Session) =>
+    const of = (s: Thread) =>
       harness(
         s.harness,
         Layer.mergeAll(
-          SessionRepositoryMemory(() => [s]),
+          ThreadRepositoryMemory(() => [s]),
           RunSourceMemory({}),
           TaskRepositoryMemory({}),
         ),

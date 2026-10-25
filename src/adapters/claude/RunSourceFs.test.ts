@@ -11,12 +11,12 @@ import {
 } from "@/adapters/claude/fixtures.ts";
 import { RunSourceFs } from "@/adapters/claude/RunSourceFs.ts";
 import { foldAll } from "@/domain/fold.ts";
-import { AgentId, SessionId } from "@/domain/ids.ts";
+import { AgentId, ThreadId } from "@/domain/ids.ts";
 import { emptyRun } from "@/domain/run.ts";
 import { timeline } from "@/domain/timeline.ts";
 import { RunSource } from "@/ports/RunSource.ts";
 
-const SID = SessionId("sess-1");
+const SID = ThreadId("sess-1");
 const SUB = "sub1";
 const text = { type: "text" };
 
@@ -83,7 +83,7 @@ describe("RunSourceFs snapshot", () => {
         const { fs, dir, source } = yield* setup(Schedule.once);
         yield* fs.makeDirectory(dir, { recursive: true });
         const error = yield* RunSource.use((s) =>
-          Stream.runCollect(s.events(SessionId("nope"))),
+          Stream.runCollect(s.events(ThreadId("nope"))),
         ).pipe(Effect.provide(source), Effect.flip);
         expect(error._tag).toBe("SourceError");
       }),

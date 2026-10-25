@@ -6,19 +6,19 @@ import {
   Stream,
   SubscriptionRef,
 } from "effect";
-import type { Session } from "@/domain/session.ts";
+import type { Thread } from "@/domain/thread.ts";
 import { Harnesses } from "@/ports/Harness.ts";
 
 export class SessionsStore extends Context.Service<
   SessionsStore,
-  { readonly sessions: SubscriptionRef.SubscriptionRef<readonly Session[]> }
+  { readonly sessions: SubscriptionRef.SubscriptionRef<readonly Thread[]> }
 >()("SessionsStore") {}
 
-type Listing = Effect.Effect<readonly Session[], unknown>;
+type Listing = Effect.Effect<readonly Thread[], unknown>;
 
 // A harness that fails to answer keeps its last known sessions; the others still show.
 const lister = () => {
-  const last = new Map<Listing, readonly Session[]>();
+  const last = new Map<Listing, readonly Thread[]>();
   return (listings: readonly Listing[]) =>
     Effect.forEach(
       listings,
@@ -39,7 +39,7 @@ export const SessionsStoreLive = (poll: Schedule.Schedule<unknown>) =>
     Effect.gen(function* () {
       const harnesses = yield* Harnesses;
       const listAll = lister();
-      const sessions = yield* SubscriptionRef.make<readonly Session[]>([]);
+      const sessions = yield* SubscriptionRef.make<readonly Thread[]>([]);
 
       yield* Stream.fromSchedule(poll).pipe(
         Stream.runForEach(() =>

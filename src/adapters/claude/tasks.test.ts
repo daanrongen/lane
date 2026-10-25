@@ -10,8 +10,8 @@ import {
   toolUse,
 } from "@/adapters/claude/fixtures.ts";
 import { makeTaskDecoder, TaskRepositoryFs } from "@/adapters/claude/tasks.ts";
-import { SessionId } from "@/domain/ids.ts";
-import type { Session } from "@/domain/session.ts";
+import { ThreadId } from "@/domain/ids.ts";
+import type { Thread } from "@/domain/thread.ts";
 import { TaskRepository } from "@/ports/TaskRepository.ts";
 
 const queue = (s: number, operation: string, content?: string) => ({
@@ -91,11 +91,11 @@ describe("TaskRepositoryFs", () => {
         );
         const session = {
           harness: "claude",
-          id: SessionId("s1"),
+          id: ThreadId("s1"),
           cwd: "/p",
           status: "past",
           updatedAt: 0,
-        } as Session;
+        } as Thread;
         const lists = yield* TaskRepository.use((r) =>
           Stream.runCollect(r.tasks(session)),
         ).pipe(

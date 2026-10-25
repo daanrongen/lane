@@ -1,18 +1,18 @@
-import type { SessionId } from "@/domain/ids.ts";
+import type { ThreadId } from "@/domain/ids.ts";
 
 // Who runs the agents; the dashboard is agnostic to which.
 export type HarnessId = "claude" | "codex";
 
 // A past session has no running process; its transcript is all that remains.
-export type SessionStatus = "busy" | "idle" | "past";
+export type ThreadStatus = "busy" | "idle" | "past";
 
-export interface Session {
+export interface Thread {
   readonly harness: HarnessId;
-  readonly id: SessionId;
+  readonly id: ThreadId;
   readonly cwd: string;
   // Only harnesses with a process registry know it.
   readonly pid?: number;
-  readonly status: SessionStatus;
+  readonly status: ThreadStatus;
   readonly name?: string;
   readonly updatedAt: number;
 }

@@ -1,12 +1,12 @@
 import type { Asset } from "@/domain/assets.ts";
 import type { RunEvent } from "@/domain/events.ts";
-import { AgentId, SessionId, SpanId } from "@/domain/ids.ts";
-import type { Session } from "@/domain/session.ts";
+import { AgentId, SpanId, ThreadId } from "@/domain/ids.ts";
 import type { Task } from "@/domain/task.ts";
+import type { Thread } from "@/domain/thread.ts";
 
-export const demoSession: Session = {
+export const demoSession: Thread = {
   harness: "claude",
-  id: SessionId("demo"),
+  id: ThreadId("demo"),
   cwd: "~/Developer/checkout",
   pid: 1,
   status: "busy",
@@ -14,9 +14,9 @@ export const demoSession: Session = {
   updatedAt: 0,
 };
 
-export const demoCodexSession: Session = {
+export const demoCodexSession: Thread = {
   harness: "codex",
-  id: SessionId("demo-codex"),
+  id: ThreadId("demo-codex"),
   cwd: "~/Developer/portfolio",
   status: "idle",
   updatedAt: -1,

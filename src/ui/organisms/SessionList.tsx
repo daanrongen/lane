@@ -1,4 +1,4 @@
-import type { Session } from "@/domain/session.ts";
+import type { Thread } from "@/domain/thread.ts";
 import { Column } from "@/ui/atoms/Box.tsx";
 import { useMetrics } from "@/ui/lib/context.ts";
 import { useNow } from "@/ui/lib/hooks/useNow.ts";
@@ -19,13 +19,13 @@ export const SessionList = ({
   height,
 }: {
   groups: readonly Group[];
-  selected: Session | undefined;
+  selected: Thread | undefined;
   height: number;
 }) => {
   const r = useMetrics();
   const now = useNow(30_000);
   const items = navItems(groups);
-  const isSelected = (s: Session) => selected && keyOf(s) === keyOf(selected);
+  const isSelected = (s: Thread) => selected && keyOf(s) === keyOf(selected);
   const focus = Math.max(
     0,
     items.findIndex((i) => i.kind === "session" && isSelected(i.session)),

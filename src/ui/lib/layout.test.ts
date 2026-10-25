@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { demoEvents } from "@/app/demo.ts";
 import { makeAxis } from "@/domain/axis.ts";
 import { foldAll } from "@/domain/fold.ts";
-import { AgentId, SessionId, SpanId } from "@/domain/ids.ts";
+import { AgentId, SpanId, ThreadId } from "@/domain/ids.ts";
 import { emptyRun, type Run, type Span } from "@/domain/run.ts";
 import { timeline } from "@/domain/timeline.ts";
 import { layout } from "@/ui/lib/layout.ts";
@@ -53,7 +53,7 @@ const thinking = (id: string, start: number, end: number) =>
   span("Thinking", id, start, end);
 
 const single = (...spans: Span[]): Run => ({
-  ...emptyRun(SessionId("s"), 0),
+  ...emptyRun(ThreadId("s"), 0),
   agents: [{ id: AgentId("main"), parentId: null, name: "main" }],
   spans,
 });
@@ -141,7 +141,7 @@ describe("layout scrolling", () => {
 });
 
 describe("layout links", () => {
-  const run = foldAll(emptyRun(SessionId("d"), 0), demoEvents);
+  const run = foldAll(emptyRun(ThreadId("d"), 0), demoEvents);
   const f = frameOf(run);
 
   test("every hand-off becomes an elbow into its child lane", () => {

@@ -1,9 +1,9 @@
-import type { Session } from "@/domain/session.ts";
+import type { Thread } from "@/domain/thread.ts";
 
 // Sessions that share a working directory, which Claude calls a project.
 export interface Group {
   readonly cwd: string;
-  readonly sessions: readonly Session[];
+  readonly sessions: readonly Thread[];
 }
 
 // The last two path segments name the directory.
@@ -11,8 +11,8 @@ export const dirName = (cwd: string) =>
   cwd.split("/").filter(Boolean).slice(-2).join("/") || cwd;
 
 // Newest group first, and newest session first within it.
-export const groupByDirectory = (sessions: readonly Session[]): Group[] => {
-  const byCwd = new Map<string, Session[]>();
+export const groupByDirectory = (sessions: readonly Thread[]): Group[] => {
+  const byCwd = new Map<string, Thread[]>();
   for (const s of sessions) byCwd.set(s.cwd, [...(byCwd.get(s.cwd) ?? []), s]);
   return [...byCwd]
     .map(([cwd, list]) => ({
@@ -25,11 +25,11 @@ export const groupByDirectory = (sessions: readonly Session[]): Group[] => {
     );
 };
 
-export const keyOf = (s: Session) => `${s.harness}:${s.id}`;
+export const keyOf = (s: Thread) => `${s.harness}:${s.id}`;
 
 export type NavItem =
   | { readonly kind: "group"; readonly group: Group }
-  | { readonly kind: "session"; readonly session: Session };
+  | { readonly kind: "session"; readonly session: Thread };
 
 // Groups with their sessions underneath, as one flat list.
 export const navItems = (groups: readonly Group[]): NavItem[] =>
@@ -43,9 +43,9 @@ export type Move = "next" | "previous" | "nextGroup" | "previousGroup";
 // Which session a key lands on, given where we are.
 export const move = (
   groups: readonly Group[],
-  current: Session | undefined,
+  current: Thread | undefined,
   by: Move,
-): Session | undefined => {
+): Thread | undefined => {
   const ordered = groups.flatMap((g) => g.sessions);
   const at = Math.max(
     0,

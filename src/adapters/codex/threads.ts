@@ -3,10 +3,10 @@ import { CodexHome } from "@/adapters/codex/CodexHome.ts";
 import { codexState } from "@/adapters/codex/state.ts";
 import { parseJson, rec, str } from "@/adapters/shared/json.ts";
 import { headLines } from "@/adapters/shared/ranges.ts";
-import { SessionId } from "@/domain/ids.ts";
-import type { Session, SessionStatus } from "@/domain/session.ts";
-import { SessionRepository } from "@/ports/SessionRepository.ts";
+import { ThreadId } from "@/domain/ids.ts";
+import type { Thread, ThreadStatus } from "@/domain/thread.ts";
 import { SourceError } from "@/ports/SourceError.ts";
+import { ThreadRepository } from "@/ports/ThreadRepository.ts";
 
 // Codex keeps no process registry, so how recently a rollout was written says if it is live.
 const BUSY = 30_000;
@@ -14,24 +14,24 @@ const IDLE = 600_000;
 // More than this many sessions would only slow the scan.
 const MAX_SESSIONS = 300;
 
-const statusOf = (age: number): SessionStatus =>
+const statusOf = (age: number): ThreadStatus =>
   age < BUSY ? "busy" : age < IDLE ? "idle" : "past";
 
 export const parseMeta = (
   raw: unknown,
-): Pick<Session, "id" | "cwd"> | undefined => {
+): Pick<Thread, "id" | "cwd"> | undefined => {
   const line = rec(raw);
   const p = rec(line?.payload);
   const id = str(p?.id);
   const cwd = str(p?.cwd);
   return line?.type === "session_meta" && id && cwd
-    ? { id: SessionId(id), cwd }
+    ? { id: ThreadId(id), cwd }
     : undefined;
 };
 
 // Every rollout under `sessions/YYYY/MM/DD/` is a session; titles come from Codex's own index.
-export const SessionRepositoryCodex = Layer.effect(
-  SessionRepository,
+export const ThreadRepositoryCodex = Layer.effect(
+  ThreadRepository,
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem;
     const home = yield* CodexHome;
@@ -45,7 +45,7 @@ export const SessionRepositoryCodex = Layer.effect(
       file: string,
       now: number,
       titles: ReadonlyMap<string, string>,
-    ): Effect.Effect<Session | undefined> =>
+    ): Effect.Effect<Thread | undefined> =>
       Effect.gen(function* () {
         const info = yield* fs.stat(`${dir}/${file}`);
         const mtime = Option.getOrElse(info.mtime, () => new Date(0)).getTime();
@@ -80,10 +80,10 @@ export const SessionRepositoryCodex = Layer.effect(
           concurrency: 8,
         },
       );
-      return found.filter((s): s is Session => s !== undefined);
+      return found.filter((s): s is Thread => s !== undefined);
     }).pipe(
       // No sessions directory just means Codex never ran.
-      Effect.orElseSucceed((): readonly Session[] => []),
+      Effect.orElseSucceed((): readonly Thread[] => []),
       Effect.mapError(
         (cause) =>
           new SourceError({ message: "cannot list codex sessions", cause }),

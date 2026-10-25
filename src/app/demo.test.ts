@@ -2,12 +2,12 @@ import { describe, expect, test } from "bun:test";
 import { demoCodexEvents, demoEvents } from "@/app/demo.ts";
 import { contextGauge } from "@/domain/context.ts";
 import { foldAll } from "@/domain/fold.ts";
-import { SessionId } from "@/domain/ids.ts";
+import { ThreadId } from "@/domain/ids.ts";
 import { emptyRun } from "@/domain/run.ts";
 import { isFailed, timeline } from "@/domain/timeline.ts";
 
 describe("demo run", () => {
-  const tl = timeline(foldAll(emptyRun(SessionId("d"), 0), demoEvents), 0);
+  const tl = timeline(foldAll(emptyRun(ThreadId("d"), 0), demoEvents), 0);
 
   test("has an orchestrator and four sub-agents, all handed back", () => {
     expect(tl.lanes.map((l) => l.depth)).toEqual([0, 1, 1, 1, 1]);
@@ -47,7 +47,7 @@ describe("demo run", () => {
 });
 
 describe("demo codex run", () => {
-  const tl = timeline(foldAll(emptyRun(SessionId("c"), 0), demoCodexEvents), 0);
+  const tl = timeline(foldAll(emptyRun(ThreadId("c"), 0), demoCodexEvents), 0);
 
   test("is a single finished agent with a failed call and a known window", () => {
     expect(tl.lanes).toHaveLength(1);

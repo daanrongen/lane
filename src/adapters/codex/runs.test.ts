@@ -14,12 +14,12 @@ import {
 } from "@/adapters/codex/fixtures.ts";
 import { RunSourceCodex } from "@/adapters/codex/runs.ts";
 import { foldAll } from "@/domain/fold.ts";
-import { SessionId } from "@/domain/ids.ts";
+import { ThreadId } from "@/domain/ids.ts";
 import { emptyRun } from "@/domain/run.ts";
 import { timeline } from "@/domain/timeline.ts";
 import { RunSource } from "@/ports/RunSource.ts";
 
-const SID = SessionId("sess-1");
+const SID = ThreadId("sess-1");
 
 describe("RunSourceCodex", () => {
   test("reads a rollout into a one-lane timeline", () =>
@@ -67,7 +67,7 @@ describe("RunSourceCodex", () => {
         const home = yield* fs.makeTempDirectoryScoped();
         yield* fs.makeDirectory(`${home}/sessions`, { recursive: true });
         const error = yield* RunSource.use((s) =>
-          Stream.runCollect(s.events(SessionId("nope"))),
+          Stream.runCollect(s.events(ThreadId("nope"))),
         ).pipe(
           Effect.provide(
             RunSourceCodex(Schedule.once).pipe(

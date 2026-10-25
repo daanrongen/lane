@@ -1,12 +1,12 @@
 import { Effect, type FileSystem } from "effect";
-import type { SessionId } from "@/domain/ids.ts";
+import type { ThreadId } from "@/domain/ids.ts";
 import { SourceError } from "@/ports/SourceError.ts";
 
 // A session's transcript sits in the project folder it ran in, and its sub-agents beside it.
 export const locateTranscript = (
   fs: FileSystem.FileSystem,
   home: string,
-  id: SessionId,
+  id: ThreadId,
 ) =>
   Effect.gen(function* () {
     const projects = `${home}/projects`;

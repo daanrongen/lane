@@ -16,8 +16,8 @@ import {
   payloadTitle,
   TaskRepositoryCodex,
 } from "@/adapters/codex/tasks.ts";
-import { SessionId } from "@/domain/ids.ts";
-import type { Session } from "@/domain/session.ts";
+import { ThreadId } from "@/domain/ids.ts";
+import type { Thread } from "@/domain/thread.ts";
 import { TaskRepository } from "@/ports/TaskRepository.ts";
 
 describe("codex task helpers", () => {
@@ -78,7 +78,7 @@ describe("TaskRepositoryCodex", () => {
   test("goals and the queue from SQLite, and update_plan from the rollout, make one list", () =>
     runFs(
       Effect.gen(function* () {
-        const SID = SessionId("s1");
+        const SID = ThreadId("s1");
         const fs = yield* FileSystem.FileSystem;
         const home = yield* fs.makeTempDirectoryScoped();
         const dir = `${home}/sessions/2026/01/01`;
@@ -117,7 +117,7 @@ describe("TaskRepositoryCodex", () => {
           cwd: "/x",
           status: "past",
           updatedAt: 0,
-        } as Session;
+        } as Thread;
         const lists = yield* TaskRepository.use((r) =>
           Stream.runCollect(r.tasks(session)),
         ).pipe(

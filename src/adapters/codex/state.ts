@@ -2,7 +2,7 @@ import { Database } from "bun:sqlite";
 import { Effect, FileSystem } from "effect";
 import { CodexHome } from "@/adapters/codex/CodexHome.ts";
 
-export interface Thread {
+export interface ThreadRow {
   readonly id: string;
   readonly title: string;
   readonly cwd: string;
@@ -21,7 +21,7 @@ export interface Child {
 }
 
 export interface CodexState {
-  readonly threads: Effect.Effect<readonly Thread[]>;
+  readonly threads: Effect.Effect<readonly ThreadRow[]>;
   readonly goals: (thread: string) => Effect.Effect<readonly Goal[]>;
   readonly queue: (thread: string) => Effect.Effect<readonly string[]>;
   readonly children: (thread: string) => Effect.Effect<readonly Child[]>;

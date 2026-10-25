@@ -14,7 +14,7 @@ import { parseJson } from "@/adapters/shared/json.ts";
 import { startOf } from "@/adapters/shared/origin.ts";
 import { tail } from "@/adapters/shared/tail.ts";
 import type { RunEvent } from "@/domain/events.ts";
-import { AgentId, SessionId } from "@/domain/ids.ts";
+import { AgentId, ThreadId } from "@/domain/ids.ts";
 import { RunSource } from "@/ports/RunSource.ts";
 import { SourceError } from "@/ports/SourceError.ts";
 
@@ -57,7 +57,7 @@ export const RunSourceCodex = (poll: Schedule.Schedule<unknown>) =>
       };
 
       // Threads the root spawned run as lanes of their own.
-      const children = (id: SessionId, origin: number) =>
+      const children = (id: ThreadId, origin: number) =>
         Stream.fromSchedule(poll).pipe(
           Stream.mapEffect(() => state.children(id)),
           Stream.flattenIterable,
@@ -67,7 +67,7 @@ export const RunSourceCodex = (poll: Schedule.Schedule<unknown>) =>
               seen.has(child.id) ? [seen, []] : [seen.add(child.id), [child]],
           ),
           Stream.mapEffect((child) =>
-            locateRollout(fs, home, SessionId(child.id)).pipe(
+            locateRollout(fs, home, ThreadId(child.id)).pipe(
               Effect.map((file) => ({ child, file })),
               Effect.option,
             ),
@@ -85,7 +85,7 @@ export const RunSourceCodex = (poll: Schedule.Schedule<unknown>) =>
           ),
         );
 
-      const events = (id: SessionId) =>
+      const events = (id: ThreadId) =>
         Stream.unwrap(
           Effect.gen(function* () {
             const file = yield* locateRollout(fs, home, id);

@@ -1,7 +1,7 @@
 import type { Asset } from "@/domain/assets.ts";
 import type { Run } from "@/domain/run.ts";
-import type { Session } from "@/domain/session.ts";
 import type { Task } from "@/domain/task.ts";
+import type { Thread } from "@/domain/thread.ts";
 
 export interface Store<A> {
   readonly get: () => A;
@@ -24,8 +24,8 @@ export interface OpenedAssets {
 
 // All the UI knows of the app: no Effect types cross this line.
 export interface UiPorts {
-  readonly sessions: Store<readonly Session[]>;
-  readonly open: (session: Session) => Promise<OpenedRun>;
+  readonly sessions: Store<readonly Thread[]>;
+  readonly open: (session: Thread) => Promise<OpenedRun>;
   readonly openAssets: (cwd: string) => Promise<OpenedAssets>;
 }
 

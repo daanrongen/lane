@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
-import { SessionId } from "@/domain/ids.ts";
-import type { Session } from "@/domain/session.ts";
+import { ThreadId } from "@/domain/ids.ts";
+import type { Thread } from "@/domain/thread.ts";
 import {
   dirName,
   groupByDirectory,
@@ -9,9 +9,9 @@ import {
   visible,
 } from "@/ui/lib/sessionsNav.ts";
 
-const s = (id: string, cwd: string, updatedAt: number): Session => ({
+const s = (id: string, cwd: string, updatedAt: number): Thread => ({
   harness: "claude",
-  id: SessionId(id),
+  id: ThreadId(id),
   cwd,
   status: "past",
   updatedAt,
@@ -25,7 +25,7 @@ const groups = groupByDirectory([
 ]);
 
 describe("move", () => {
-  const id = (x?: Session) => (x ? String(x.id) : undefined);
+  const id = (x?: Thread) => (x ? String(x.id) : undefined);
   test("next and previous walk every session and stop at the ends", () => {
     expect(id(move(groups, groups[0]?.sessions[0], "next"))).toBe("a2");
     expect(id(move(groups, groups[2]?.sessions[0], "next"))).toBe("c1");

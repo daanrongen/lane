@@ -1,6 +1,6 @@
 import type { StyleDesc } from "@gpuix/react";
 import type { CellKind } from "@/domain/context.ts";
-import type { HarnessId } from "@/domain/session.ts";
+import type { HarnessId } from "@/domain/thread.ts";
 import type { Bar } from "@/domain/timeline.ts";
 import { alpha, type Theme } from "@/ui/lib/theme.ts";
 

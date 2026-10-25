@@ -4,31 +4,28 @@ import { Effect, FileSystem, Layer } from "effect";
 import { jsonl, runFs } from "@/adapters/claude/fixtures.ts";
 import { CodexHome } from "@/adapters/codex/CodexHome.ts";
 import { meta } from "@/adapters/codex/fixtures.ts";
-import {
-  parseMeta,
-  SessionRepositoryCodex,
-} from "@/adapters/codex/sessions.ts";
-import { SessionId } from "@/domain/ids.ts";
-import { SessionRepository } from "@/ports/SessionRepository.ts";
+import { parseMeta, ThreadRepositoryCodex } from "@/adapters/codex/threads.ts";
+import { ThreadId } from "@/domain/ids.ts";
+import { ThreadRepository } from "@/ports/ThreadRepository.ts";
 
 const list = (home: string) =>
-  SessionRepository.use((c) => c.list).pipe(
+  ThreadRepository.use((c) => c.list).pipe(
     Effect.provide(
-      SessionRepositoryCodex.pipe(Layer.provide(CodexHome.layer(home))),
+      ThreadRepositoryCodex.pipe(Layer.provide(CodexHome.layer(home))),
     ),
   );
 
 describe("parseMeta", () => {
   test("reads the id and working directory", () => {
     expect(parseMeta(meta(0, "abc", "/p"))).toEqual({
-      id: SessionId("abc"),
+      id: ThreadId("abc"),
       cwd: "/p",
     });
     expect(parseMeta({ type: "other" })).toBeUndefined();
   });
 });
 
-describe("SessionRepositoryCodex", () => {
+describe("ThreadRepositoryCodex", () => {
   test("every rollout is a session; age says if it is still live", () =>
     runFs(
       Effect.gen(function* () {

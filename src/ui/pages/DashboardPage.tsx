@@ -1,7 +1,7 @@
 import { useWindowSize } from "@gpuix/react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { Asset } from "@/domain/assets.ts";
-import type { Session } from "@/domain/session.ts";
+import type { Thread } from "@/domain/thread.ts";
 import { Text } from "@/ui/atoms/Text.tsx";
 import { MetricsContext } from "@/ui/lib/context.ts";
 import { sessionTitle } from "@/ui/lib/format.ts";
@@ -31,7 +31,7 @@ const ZOOM = { min: 0.6, max: 2.4, step: 0.1 };
 const clampZoom = (z: number) =>
   Math.round(Math.min(ZOOM.max, Math.max(ZOOM.min, z)) * 10) / 10;
 
-const useOpened = (ports: UiPorts, session: Session | undefined) => {
+const useOpened = (ports: UiPorts, session: Thread | undefined) => {
   const [opened, setOpened] = useState<OpenedRun>();
   const latest = useRef(session);
   latest.current = session;

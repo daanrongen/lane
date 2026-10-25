@@ -1,4 +1,4 @@
-import type { Session } from "@/domain/session.ts";
+import type { Thread } from "@/domain/thread.ts";
 import { Row } from "@/ui/atoms/Box.tsx";
 import { Dot } from "@/ui/atoms/Dot.tsx";
 import { Text } from "@/ui/atoms/Text.tsx";
@@ -11,7 +11,7 @@ export const SessionSwitcher = ({
   position,
   total,
 }: {
-  current: Session | undefined;
+  current: Thread | undefined;
   position: number;
   total: number;
 }) => {

@@ -2,19 +2,19 @@ import { Effect, FileSystem, Layer, Option } from "effect";
 import { ClaudeHome } from "@/adapters/claude/ClaudeHome.ts";
 import { parseJson, rec, str } from "@/adapters/shared/json.ts";
 import { headLines, tailLines } from "@/adapters/shared/ranges.ts";
-import { SessionId } from "@/domain/ids.ts";
-import type { Session } from "@/domain/session.ts";
-import { SessionRepository } from "@/ports/SessionRepository.ts";
+import { ThreadId } from "@/domain/ids.ts";
+import type { Thread } from "@/domain/thread.ts";
 import { SourceError } from "@/ports/SourceError.ts";
+import { ThreadRepository } from "@/ports/ThreadRepository.ts";
 
-export const parseSession = (raw: unknown): Session | undefined => {
+export const parseSession = (raw: unknown): Thread | undefined => {
   const r = rec(raw);
-  const id = str(r?.sessionId);
+  const id = str(r?.threadId);
   const cwd = str(r?.cwd);
   if (!id || !cwd || typeof r?.pid !== "number") return undefined;
   return {
     harness: "claude",
-    id: SessionId(id),
+    id: ThreadId(id),
     cwd,
     pid: r.pid,
     status: r.status === "busy" ? "busy" : "idle",
@@ -58,9 +58,9 @@ export const summarize = (
 
 // Every transcript is a session; the registry says which are still running.
 // Registry files outlive their process, so liveness is injected.
-export const SessionRepositoryFs = (isAlive: (pid: number) => boolean) =>
+export const ThreadRepositoryFs = (isAlive: (pid: number) => boolean) =>
   Layer.effect(
-    SessionRepository,
+    ThreadRepository,
     Effect.gen(function* () {
       const fs = yield* FileSystem.FileSystem;
       const home = yield* ClaudeHome;
@@ -117,11 +117,11 @@ export const SessionRepositoryFs = (isAlive: (pid: number) => boolean) =>
           newest,
           ({ file, mtime, size }) =>
             summaryOf(file, mtime, size).pipe(
-              Effect.map(({ cwd, title }): Session | undefined =>
+              Effect.map(({ cwd, title }): Thread | undefined =>
                 cwd
                   ? {
                       harness: "claude",
-                      id: SessionId(
+                      id: ThreadId(
                         file.slice(file.lastIndexOf("/") + 1, -".jsonl".length),
                       ),
                       cwd,
@@ -135,8 +135,8 @@ export const SessionRepositoryFs = (isAlive: (pid: number) => boolean) =>
             ),
           { concurrency: 8 },
         );
-        return found.filter((s): s is Session => s !== undefined);
-      }).pipe(Effect.orElseSucceed((): Session[] => []));
+        return found.filter((s): s is Thread => s !== undefined);
+      }).pipe(Effect.orElseSucceed((): Thread[] => []));
 
       const running = Effect.gen(function* () {
         const dir = `${home}/sessions`;
@@ -150,9 +150,9 @@ export const SessionRepositoryFs = (isAlive: (pid: number) => boolean) =>
           ),
         );
         return all.filter(
-          (s): s is Session => s?.pid !== undefined && isAlive(s.pid),
+          (s): s is Thread => s?.pid !== undefined && isAlive(s.pid),
         );
-      }).pipe(Effect.orElseSucceed((): Session[] => []));
+      }).pipe(Effect.orElseSucceed((): Thread[] => []));
 
       const list = Effect.gen(function* () {
         const [past, live] = yield* Effect.all([transcripts, running]);

@@ -11,7 +11,7 @@ import {
 import { openAssets } from "@/app/openAssets.ts";
 import { type OpenRun, openRun } from "@/app/openRun.ts";
 import { SessionsStore } from "@/app/SessionsStore.ts";
-import type { Session } from "@/domain/session.ts";
+import type { Thread } from "@/domain/thread.ts";
 import type { Assets } from "@/ports/Assets.ts";
 import type { Harnesses } from "@/ports/Harness.ts";
 import type { Store, UiPorts } from "@/ui/lib/ports.ts";
@@ -37,7 +37,7 @@ export const makeUiPorts = async <E>(
     SessionsStore.use((s) => Effect.succeed(s.sessions)),
   );
 
-  const open = async (session: Session) => {
+  const open = async (session: Thread) => {
     const scope = await Effect.runPromise(Scope.make());
     const opened: OpenRun = await runtime.runPromise(
       openRun(session).pipe(Effect.provideService(Scope.Scope, scope)),

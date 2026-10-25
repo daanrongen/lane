@@ -14,7 +14,7 @@ import {
 } from "@/adapters/claude/fixtures.ts";
 import type { RunEvent } from "@/domain/events.ts";
 import { foldAll } from "@/domain/fold.ts";
-import { AgentId, SessionId, SpanId } from "@/domain/ids.ts";
+import { AgentId, SpanId, ThreadId } from "@/domain/ids.ts";
 import { emptyRun } from "@/domain/run.ts";
 import { timeline } from "@/domain/timeline.ts";
 
@@ -223,7 +223,7 @@ describe("sub-agents", () => {
     ]);
 
     const tl = timeline(
-      foldAll(emptyRun(SessionId("s"), origin), [...parent, ...child]),
+      foldAll(emptyRun(ThreadId("s"), origin), [...parent, ...child]),
       9,
     );
 
@@ -321,7 +321,7 @@ describe("setup, compaction and mcp", () => {
       assistant(1, "m1", [{ type: "text", text: "x".repeat(400) }]),
       { type: "system", subtype: "compact_boundary", timestamp: iso(2) },
     ]);
-    const run = foldAll(emptyRun(SessionId("s"), 0), events);
+    const run = foldAll(emptyRun(ThreadId("s"), 0), events);
     expect(run.context).toEqual([]);
   });
 
@@ -330,7 +330,7 @@ describe("setup, compaction and mcp", () => {
       assistant(1, "m1", [toolUse("t1", "mcp__linear__list_issues", {})]),
       result(2, "t1", true),
     ]);
-    const run = foldAll(emptyRun(SessionId("s"), 0), events);
+    const run = foldAll(emptyRun(ThreadId("s"), 0), events);
     expect(run.spans[0]).toMatchObject({
       _tag: "McpCall",
       server: "linear",
@@ -342,7 +342,7 @@ describe("setup, compaction and mcp", () => {
 
 describe("network requests", () => {
   const requests = (lines: unknown[]) =>
-    foldAll(emptyRun(SessionId("s"), 0), decodeAll(cfg, lines)).requests;
+    foldAll(emptyRun(ThreadId("s"), 0), decodeAll(cfg, lines)).requests;
 
   test("WebFetch, WebSearch and urls in shell commands are requests", () => {
     const out = requests([
@@ -365,7 +365,7 @@ describe("network requests", () => {
 
 describe("how the work is steered", () => {
   const fold = (lines: unknown[]) =>
-    foldAll(emptyRun(SessionId("s"), 0), decodeAll(cfg, lines));
+    foldAll(emptyRun(ThreadId("s"), 0), decodeAll(cfg, lines));
 
   test("a Skill call is a skill use", () => {
     const run = fold([

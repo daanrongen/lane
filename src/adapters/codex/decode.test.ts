@@ -13,14 +13,14 @@ import {
 } from "@/adapters/codex/fixtures.ts";
 import type { RunEvent } from "@/domain/events.ts";
 import { foldAll } from "@/domain/fold.ts";
-import { AgentId, SessionId } from "@/domain/ids.ts";
+import { AgentId, ThreadId } from "@/domain/ids.ts";
 import { emptyRun } from "@/domain/run.ts";
 
 const main = AgentId("main");
 const decode = (lines: unknown[]) => {
   const d = makeCodexDecoder({ origin, agentId: main });
   const events: RunEvent[] = [...lines.flatMap((l) => d.push(l)), ...d.end()];
-  return { events, run: foldAll(emptyRun(SessionId("s"), origin), events) };
+  return { events, run: foldAll(emptyRun(ThreadId("s"), origin), events) };
 };
 
 describe("makeCodexDecoder", () => {
