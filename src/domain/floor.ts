@@ -14,6 +14,7 @@ import {
   type InsightKind,
   insightsOf,
 } from "@/domain/insight.ts";
+import type { Ref } from "@/domain/ref.ts";
 import { addUsage, emptyUsage, type Run, type Usage } from "@/domain/run.ts";
 import type { Runtime } from "@/domain/runtime.ts";
 import type { Task } from "@/domain/task.ts";
@@ -98,6 +99,7 @@ export interface FeedItem {
   readonly kind: ActKind;
   readonly label: string;
   readonly status: ActStatus;
+  readonly touches: readonly Ref[];
 }
 
 export interface AttentionItem extends Attention {
@@ -224,6 +226,7 @@ export const floor = (
           kind: a.kind,
           label: a.label,
           status: a.status,
+          touches: a.touches,
         });
       }
       views.push({
