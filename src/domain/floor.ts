@@ -20,6 +20,7 @@ import type { Runtime } from "@/domain/runtime.ts";
 import type { Task } from "@/domain/task.ts";
 import type { HarnessId, Thread } from "@/domain/thread.ts";
 import { fileTree, type Touch, type TreeNode } from "@/domain/tree.ts";
+import type { Limit } from "@/domain/vitals.ts";
 import {
   baseName,
   resolvePath,
@@ -70,6 +71,7 @@ export interface AgentView {
     readonly ratio: number | null;
   };
   readonly usage: Usage;
+  readonly limits: readonly Limit[];
   readonly progress: { readonly done: number; readonly total: number };
   readonly modes: Readonly<Record<string, string>>;
   readonly acts: number;
@@ -249,6 +251,7 @@ export const floor = (
         provider: s.vitals.provider,
         fill: s.vitals.fill,
         usage: s.vitals.usage,
+        limits: s.vitals.limits,
         progress: s.progress,
         modes: s.vitals.modes,
         acts: s.acts,
@@ -281,6 +284,7 @@ export const floor = (
       state: "idle",
       lastEventAt: p.startedAt,
       usage: emptyUsage,
+      limits: [],
       progress: { done: 0, total: 0 },
       modes: {},
       acts: 0,

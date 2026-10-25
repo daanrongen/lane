@@ -102,6 +102,21 @@ const Now = ({
           .filter(Boolean)
           .join(" · ")}
       </Text>
+      {agent.limits.map((l) => (
+        <Text
+          key={l.window}
+          size="small"
+          tone={l.used >= 0.9 ? "failed" : "dim"}
+        >
+          {[
+            `${l.window} quota ${Math.round(l.used * 100)}%`,
+            l.resetsAt !== undefined &&
+              `resets in ${duration((l.resetsAt - run.startedAt) / 1000 - now)}`,
+          ]
+            .filter(Boolean)
+            .join(" · ")}
+        </Text>
+      ))}
       {acts.map((a) => (
         <ActLine key={a.id} act={a} now={now} />
       ))}

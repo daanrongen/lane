@@ -20,6 +20,7 @@ const view = (
   name,
   state: "working",
   usage: emptyUsage,
+  limits: [],
   progress: { done: 0, total: 0 },
   modes: {},
   acts: 0,
