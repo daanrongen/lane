@@ -20,8 +20,21 @@ commands (read-only; a table in a terminal, JSON when piped):
   tasks       what agents are doing and have lined up next
   agents      list and inspect agents
   attention   who needs you
+  feed        what every agent did lately
+  acts        every act of a thread
+  files       files agents read or changed
+  tree        the part of a workspace's tree agents touched
+  usage       tokens and spend by model, harness, workspace or thread
+  plan        plans put to a person
+  context     what fills an agent's context window
+  assets      skills, MCP servers, models, rules, plugins, settings
+  mcp skills hosts models   what agents used
+  harnesses   what each harness can report
+  runtimes    models a local Ollama has loaded
+  doctor      which harness data is found and readable
 
 Run lane <command> --help for its options, --json or --format table|json|ndjson to choose the output,
+--watch to read again every few seconds,
 and lane --completions zsh|bash|fish for shell completions.
 
 With neither flag, LANE_MODE=terminal|window applies, else lane renders in

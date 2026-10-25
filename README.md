@@ -51,6 +51,15 @@ Read-only queries that print and exit, without opening the app. Output is a tabl
 | `lane tasks ls [thread]` / `next` | what each agent is doing and has lined up next |
 | `lane agents ls` / `show <agent>` | every agent with state, model, context fill, cost and what it is doing now |
 | `lane attention` | who needs you, is stalled or failed (`--exit-code` exits 1 when anyone does) |
+| `lane feed` | what every agent did lately (`--kind`, `--agent`, `--text`, `--touching <file, host, ...>`) |
+| `lane acts [thread]` | every act of a thread with status, failure and what it touched (`--kind`, `--failed`, `--awaiting`) |
+| `lane files` / `tree [dir]` | files agents read or changed, and a workspace's touched tree (`--edited`, `--shared`) |
+| `lane usage` | tokens and spend by `--by model\|harness\|workspace\|thread`; `n/a` where a harness cannot report cost |
+| `lane plan [thread]` / `context [thread]` | plans put to a person; what fills an agent's context window |
+| `lane assets` | skills, MCP servers, models, rules, plugins and settings (`--kind`, `-w`) |
+| `lane mcp` / `skills` / `hosts` / `models` | what agents used, per thread or across the live ones, against the catalog |
+| `lane harnesses` / `runtimes` | what each harness can report (native, partial or n/a); the models Ollama has loaded |
+| `lane doctor` | which harness data is found and readable; exits 1 if a harness cannot be listed |
 
 A `<thread>` is an id, `harness:id`, an id prefix, a directory or part of a name. An `<agent>` is a full or partial `harness:thread:agent` ref, or a name.
 
@@ -64,6 +73,7 @@ Options shared by the listing commands:
 | `--all` | every thread, not just live and recent ones |
 | `--no-probe` | do not look at running processes |
 | `--no-header` | leave the header row out of a table |
+| `-f`, `--watch` | read again and redraw every 2 seconds until interrupted (`--every <seconds>`); appends one result per read when piped |
 
 Each command adds its own filters: `threads ls` takes `--live`, `--past`, `--status` and `--since 2h`; `tasks ls` takes `--status doing|next|done|any`, `--source` and `--owner`; `agents ls` takes `--state`. Run `lane <command> --help` for the full list.
 
@@ -73,6 +83,7 @@ lane threads ls --live -w .                 # live threads in this directory
 lane tasks ls .                             # doing and next, for the newest thread here
 lane agents ls --state stalled --json | jq  # machine-readable
 lane attention --exit-code || notify-send   # exit 1 when anyone needs you
+lane feed --touching package.json -f        # follow what touches a file
 ```
 
 Tasks list what an agent is doing now and what is lined up next, including work handed to sub-agents. Without a thread, `tasks ls` covers every live and recent one; done tasks appear with `--status done` or `any`.

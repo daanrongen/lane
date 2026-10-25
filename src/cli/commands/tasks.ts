@@ -1,16 +1,14 @@
 import { Clock, Effect } from "effect";
 import { Argument, Command, Flag } from "effect/cli";
-import type { Loaded } from "@/app/assemble.ts";
-import { listThreads, readFloor, snapshotRun } from "@/app/Snapshot.ts";
+import { readFloor } from "@/app/Snapshot.ts";
 import { since, threadShort } from "@/cli/commands/shared.ts";
 import { emit } from "@/cli/emit.ts";
 import { limitOf, type Scope } from "@/cli/filters.ts";
-import { CliError, output, plain, scope } from "@/cli/options.ts";
+import { output, plain, scope } from "@/cli/options.ts";
 import { table } from "@/cli/render.ts";
-import { pickThread } from "@/cli/select.ts";
+import { loadRuns } from "@/cli/thread.ts";
 import { board } from "@/domain/board.ts";
 import type { TaskStatus } from "@/domain/task.ts";
-import { resolvePath, within } from "@/domain/workspace.ts";
 
 interface Filter extends Scope {
   readonly all: boolean;
@@ -24,29 +22,11 @@ const OPEN: readonly TaskStatus[] = ["doing", "next"];
 export const tasksLs = (arg: string | undefined, o: Filter, cwd: string) =>
   Effect.gen(function* () {
     const now = yield* Clock.currentTimeMillis;
-    const loaded: readonly Loaded[] = arg
-      ? [
-          yield* Effect.gen(function* () {
-            const { threads } = yield* listThreads(!o.noProbe);
-            const picked = pickThread(threads, arg, cwd);
-            if (!picked.ok) {
-              return yield* new CliError({ message: picked.message, code: 3 });
-            }
-            return yield* snapshotRun(picked.thread);
-          }),
-        ]
-      : (yield* readFloor({ all: o.all, probe: !o.noProbe })).loaded;
+    const loaded = yield* loadRuns(arg, o, cwd);
 
     const status = o.status ?? "open";
     const owner = o.owner?.toLowerCase();
-    const root =
-      o.workspace === undefined ? undefined : resolvePath(cwd, o.workspace);
     const rows = loaded
-      .filter(
-        (l) =>
-          (!o.harness || l.thread.harness === o.harness) &&
-          (!root || within(root, l.thread.cwd)),
-      )
       .flatMap((l) => {
         const b = board(l.run, l.tasks);
         return [...b.doing, ...b.next, ...b.done].map((t) => ({
