@@ -7,6 +7,7 @@ import {
   commandRefs,
   hostRefs,
   patchFiles,
+  shellWrites,
   touchEvents,
 } from "@/adapters/shared/touches.ts";
 import type { RunEvent } from "@/domain/events.ts";
@@ -152,6 +153,7 @@ export const makeCodexDecoder = (cfg: CodexConfig): Decoder => {
       `${label}\n${typeof args === "string" ? args : ""}`,
     );
     const targets = targetsOfCommand(label);
+    const written = patched.length ? [] : shellWrites(label);
     return [
       ...added(at, { kind: "Tool", label: name }, sizeOf(args)),
       ...requestEvents(agentId, at, name, targets),
@@ -160,10 +162,15 @@ export const makeCodexDecoder = (cfg: CodexConfig): Decoder => {
         id,
         [
           ...patched.map((f) => file(f.path)),
+          ...written.map((p) => file(p)),
           ...(patched.length || mcpName(name) ? [] : commandRefs(label)),
           ...hostRefs(targets),
         ],
-        patched[0] && { op: patched[0].op },
+        patched[0]
+          ? { op: patched[0].op }
+          : written.length
+            ? { op: "modify" }
+            : undefined,
       ),
     ];
   };

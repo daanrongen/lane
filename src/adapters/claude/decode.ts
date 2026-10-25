@@ -15,9 +15,10 @@ import {
 import {
   commandRefs,
   hostRefs,
+  shellWrites,
   touchEvents,
 } from "@/adapters/shared/touches.ts";
-import type { Approval } from "@/domain/act.ts";
+import type { Approval, Edit } from "@/domain/act.ts";
 import type { RunEvent } from "@/domain/events.ts";
 import { ActId, AgentId, SpanId } from "@/domain/ids.ts";
 import { mcpName } from "@/domain/mcp.ts";
@@ -90,12 +91,18 @@ const touchesOf = (
     ...(FILE_TOOLS.has(name) && path ? [file(path)] : []),
     ...(dir && (name === "Grep" || name === "Glob") ? [folder(dir)] : []),
     ...(name === "Bash" ? commandRefs(str(input?.command)) : []),
+    ...(name === "Bash"
+      ? shellWrites(str(input?.command)).map((p) => file(p))
+      : []),
     ...(name === "Skill" && str(input?.skill)
       ? [skill(String(input?.skill))]
       : []),
     ...hostRefs(targets),
   ];
 };
+
+const shellEdit = (input: Json | undefined): Edit | undefined =>
+  shellWrites(str(input?.command)).length ? { op: "modify" } : undefined;
 
 // Files are grouped by their last two directories.
 const sourceOf = (
@@ -254,7 +261,11 @@ export const makeDecoder = (cfg: DecoderConfig): Decoder => {
         ...entry,
         ...called(id, name, input, at),
         ...proposed(id, name, input, at),
-        ...touchEvents(id, touchesOf(name, input, targetsOf(name, input))),
+        ...touchEvents(
+          id,
+          touchesOf(name, input, targetsOf(name, input)),
+          name === "Bash" ? shellEdit(input) : undefined,
+        ),
       ];
     pending.set(id, { name, input, at });
     return [...entry, ...resolve(id, false)];

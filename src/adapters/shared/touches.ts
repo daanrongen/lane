@@ -42,3 +42,28 @@ export const touchEvents = (
 
 export const patchRefs = (text: string) =>
   patchFiles(text).map((f) => file(f.path));
+
+const QUOTED = /(?<!>\s*)(["'])(?:\\.|(?!\1).)*\1/g;
+const REDIRECT = /(?<![&2=-])>>?(?!&)\s*(["']?)([^\s|&;<>()"']+)\1/g;
+const TEE = /\btee\s+(?:-\w+\s+)*([^\s|&;<>()]+)/g;
+const SED_I =
+  /\bsed\s+(?:-\S+\s+)*-i\S*\s+(?:-\S+\s+|'[^']*'\s+|"[^"]*"\s+|\S+\s+)*?([^\s|&;<>]+)\s*(?:$|[|&;])/g;
+const MOVE = /\b(?:mv|cp)\s+(?:-\w+\s+)*\S+\s+([^\s|&;<>()]+)/g;
+
+// The body of a heredoc is text, not shell; an unfinished one runs to the end.
+const HEREDOC = /(<<-?\s*(["']?)(\w+)\2[^\n]*)\n[\s\S]*?(?:\n\s*\3\b|$)/g;
+
+const real = (p: string) => !/^[$&='-]|^\/dev\/|^\d+$/.test(p);
+
+// Files a shell command writes, as far as its text shows.
+export const shellWrites = (cmd: string | undefined): string[] => {
+  if (!cmd) return [];
+  const bare = cmd.replace(HEREDOC, "$1").replace(QUOTED, "''");
+  const found = [
+    ...[...bare.matchAll(REDIRECT)].map((m) => m[2]),
+    ...[...bare.matchAll(TEE)].map((m) => m[1]),
+    ...[...bare.matchAll(SED_I)].map((m) => m[1]),
+    ...[...bare.matchAll(MOVE)].map((m) => m[1]),
+  ];
+  return [...new Set(found.filter((p): p is string => !!p && real(p)))];
+};

@@ -8,7 +8,7 @@ import {
 } from "@/adapters/claude/fixtures.ts";
 import { makeCodexDecoder } from "@/adapters/codex/decode.ts";
 import { call, meta } from "@/adapters/codex/fixtures.ts";
-import { patchFiles } from "@/adapters/shared/touches.ts";
+import { patchFiles, shellWrites } from "@/adapters/shared/touches.ts";
 import type { RunEvent } from "@/domain/events.ts";
 import { foldAll } from "@/domain/fold.ts";
 import { AgentId, ThreadId } from "@/domain/ids.ts";
@@ -106,5 +106,40 @@ describe("codex touches", () => {
       { _tag: "Command", program: "git" },
       { _tag: "Host", host: "git" },
     ]);
+  });
+});
+
+describe("shellWrites", () => {
+  test("redirects, tee, sed -i and moves name the files written", () => {
+    expect(shellWrites("cat <<EOF > src/a.ts\nx\nEOF")).toEqual(["src/a.ts"]);
+    expect(shellWrites("echo hi >> log.txt")).toEqual(["log.txt"]);
+    expect(shellWrites("bun test | tee out.txt")).toEqual(["out.txt"]);
+    expect(shellWrites("sed -i '' 's/a/b/' src/b.ts")).toEqual(["src/b.ts"]);
+    expect(shellWrites("mv old.ts new.ts")).toEqual(["new.ts"]);
+    expect(shellWrites('printf x > "out.txt"')).toEqual(["out.txt"]);
+  });
+
+  test("stderr, devices, variables and quoted arrows write nothing", () => {
+    expect(shellWrites("bun test 2>&1")).toEqual([]);
+    expect(shellWrites("ls > /dev/null")).toEqual([]);
+    expect(shellWrites("echo x > $OUT")).toEqual([]);
+    expect(shellWrites(`node -e "const f = x => x"`)).toEqual([]);
+    expect(shellWrites("git log")).toEqual([]);
+    expect(shellWrites("cat x >-3")).toEqual([]);
+    expect(shellWrites("python3 - <<'EOF'\nif a >= 0: x => y\nEOF")).toEqual(
+      [],
+    );
+    expect(shellWrites("python3 - <<EOF\nprint(1 > 0)")).toEqual([]);
+  });
+
+  test("a shell call that writes a file becomes an edit of it", () => {
+    const [act] = claude([
+      assistant(1, "m1", [
+        toolUse("t1", "Bash", { command: "echo a > src/a.ts" }),
+      ]),
+      result(2, "t1"),
+    ]);
+    expect(act?.kind).toBe("edit");
+    expect(act?.touches).toContainEqual({ _tag: "File", path: "src/a.ts" });
   });
 });
