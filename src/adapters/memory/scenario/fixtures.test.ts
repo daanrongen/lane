@@ -1,5 +1,8 @@
 import { describe, expect, test } from "bun:test";
-import { demoCodexEvents, demoEvents } from "@/app/demo.ts";
+import {
+  demoCodexEvents,
+  demoEvents,
+} from "@/adapters/memory/scenario/fixtures.ts";
 import { contextGauge } from "@/domain/context.ts";
 import { foldAll } from "@/domain/fold.ts";
 import { ThreadId } from "@/domain/ids.ts";

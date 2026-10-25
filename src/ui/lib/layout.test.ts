@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { demoEvents } from "@/app/demo.ts";
+import { demoEvents } from "@/adapters/memory/scenario/fixtures.ts";
 import { makeAxis } from "@/domain/axis.ts";
 import { foldAll } from "@/domain/fold.ts";
 import { AgentId, SpanId, ThreadId } from "@/domain/ids.ts";
