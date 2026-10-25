@@ -17,6 +17,7 @@ import { ControlsBar } from "@/ui/organisms/ControlsBar.tsx";
 import { DetailPanel } from "@/ui/organisms/DetailPanel.tsx";
 import { FeedPanel } from "@/ui/organisms/FeedPanel.tsx";
 import { FleetTable } from "@/ui/organisms/FleetTable.tsx";
+import { Help } from "@/ui/organisms/Help.tsx";
 import { Palette } from "@/ui/organisms/Palette.tsx";
 import { TopBar } from "@/ui/organisms/TopBar.tsx";
 import { TreePanel } from "@/ui/organisms/TreePanel.tsx";
@@ -35,6 +36,7 @@ export const FloorPage = ({ ports, keys }: { ports: UiPorts; keys: Keys }) => {
   const now = useNow(1000);
   const [picked, setPicked] = useState<AgentRef>();
   const [span, setSpan] = useState(300);
+  const [help, setHelp] = useState(false);
   const [finding, setFinding] = useState<{ query: string; index: number }>();
   const r = responsive(size);
   const theme = useTheme();
@@ -65,13 +67,14 @@ export const FloorPage = ({ ports, keys }: { ports: UiPorts; keys: Keys }) => {
     () => (finding ? search(agents, finding.query) : []),
     [agents, finding],
   );
-  const latest = useRef({ floor, agents, selected, finding, found });
-  latest.current = { floor, agents, selected, finding, found };
+  const latest = useRef({ floor, agents, selected, finding, found, help });
+  latest.current = { floor, agents, selected, finding, found, help };
   useEffect(() => keys.typing(finding !== undefined), [keys, finding]);
   useEffect(
     () =>
       keys.subscribe((key) => {
-        const { floor, agents, selected, finding, found } = latest.current;
+        const { floor, agents, selected, finding, found, help } =
+          latest.current;
         if (finding) {
           const move = (by: number) =>
             setFinding({
@@ -86,6 +89,11 @@ export const FloorPage = ({ ports, keys }: { ports: UiPorts; keys: Keys }) => {
           if (key === "up") move(-1);
           return;
         }
+        if (help) {
+          if (key === "escape" || key === "?") setHelp(false);
+          return;
+        }
+        if (key === "?") setHelp(true);
         if (key === "/") setFinding({ query: "", index: 0 });
         const go = (to: { ref: AgentRef } | undefined) =>
           to && setPicked(to.ref);
@@ -127,6 +135,7 @@ export const FloorPage = ({ ports, keys }: { ports: UiPorts; keys: Keys }) => {
           >
             <FleetTable
               groups={gs}
+              runtimes={floor.runtimes}
               now={now}
               span={span}
               width={fleetWidth}
@@ -160,6 +169,9 @@ export const FloorPage = ({ ports, keys }: { ports: UiPorts; keys: Keys }) => {
             <ChangesPanel floor={floor} now={now} width={half} />
           </Box>
         </PaneTemplate>
+        {help ? (
+          <Help width={Math.min(total, Math.round(r.charWidth * 70))} />
+        ) : null}
         {finding ? (
           <Palette
             query={finding.query}

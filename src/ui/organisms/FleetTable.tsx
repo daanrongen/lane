@@ -1,11 +1,12 @@
 import { useMemo } from "react";
+import type { RuntimeView } from "@/domain/floor.ts";
 import type { AgentRef } from "@/domain/ids.ts";
 import { baseName } from "@/domain/workspace.ts";
 import { Column, Row } from "@/ui/atoms/Box.tsx";
 import { Text } from "@/ui/atoms/Text.tsx";
 import { useMetrics, useTheme } from "@/ui/lib/context.ts";
 import type { Group } from "@/ui/lib/fleet.ts";
-import { duration, plural } from "@/ui/lib/format.ts";
+import { bytes, duration, plural } from "@/ui/lib/format.ts";
 import { ticks } from "@/ui/lib/lane.ts";
 import { alpha } from "@/ui/lib/theme.ts";
 import { FleetRow } from "@/ui/molecules/FleetRow.tsx";
@@ -13,6 +14,7 @@ import { FleetRow } from "@/ui/molecules/FleetRow.tsx";
 // Every agent in a row, grouped by workspace, with its time lane on one shared axis.
 export const FleetTable = ({
   groups,
+  runtimes,
   now,
   span,
   width,
@@ -21,6 +23,7 @@ export const FleetTable = ({
   notes,
 }: {
   groups: readonly Group[];
+  runtimes: readonly RuntimeView[];
   now: number;
   span: number;
   width: number;
@@ -95,6 +98,46 @@ export const FleetTable = ({
               note={notes.get(a.ref)}
               onSelect={() => onSelect(a.ref)}
             />
+          ))}
+        </Column>
+      ))}
+      {groups.length === 0 ? (
+        <Text tone="dim" style={{ padding: r.dot }}>
+          nothing is running: start Claude Code, Codex or another agent
+        </Text>
+      ) : null}
+      {runtimes.map((rt) => (
+        <Column key={rt.id}>
+          <Row
+            gap={r.dot}
+            style={{
+              height: r.row,
+              paddingLeft: r.dot,
+              backgroundColor: alpha(theme.text, 0.04),
+            }}
+          >
+            <Text>{rt.name}</Text>
+            <Text size="small" tone="dim">
+              {`runtime · used by ${plural(rt.usedBy.length, "agent")}`}
+            </Text>
+          </Row>
+          {rt.models.map((m) => (
+            <Row
+              key={m.name}
+              gap={r.dot}
+              style={{ height: r.row, paddingLeft: r.dot * 3 }}
+            >
+              <Text size="small">{m.name}</Text>
+              <Text size="small" tone="dim">
+                {[
+                  bytes(m.vram ?? m.bytes),
+                  m.expiresAt &&
+                    `unloads in ${duration((m.expiresAt - now) / 1000)}`,
+                ]
+                  .filter(Boolean)
+                  .join(" · ")}
+              </Text>
+            </Row>
           ))}
         </Column>
       ))}
