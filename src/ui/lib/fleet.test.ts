@@ -2,7 +2,14 @@ import { describe, expect, test } from "bun:test";
 import type { AgentView, Floor } from "@/domain/floor.ts";
 import { AgentRef } from "@/domain/ids.ts";
 import { emptyUsage } from "@/domain/run.ts";
-import { groups, order, step, stepAttention } from "@/ui/lib/fleet.ts";
+import {
+  groups,
+  LINGER,
+  order,
+  type Show,
+  step,
+  stepAttention,
+} from "@/ui/lib/fleet.ts";
 
 const view = (
   thread: string,
@@ -46,7 +53,7 @@ const floor = {
 } as unknown as Floor;
 
 describe("fleet", () => {
-  const gs = groups(floor);
+  const gs = groups(floor, { now: 0 });
 
   test("workspaces are alphabetical, roots by name, children after their parent", () => {
     expect(gs.map((g) => g.workspace.root)).toEqual(["/a", "/w"]);
@@ -70,5 +77,26 @@ describe("fleet", () => {
     const all = order(gs);
     expect(stepAttention(floor, all, undefined, 1)).toBe(agents[2]);
     expect(stepAttention(floor, all, agents[2]?.ref, 1)).toBe(agents[2]);
+  });
+
+  test("a finished sub-agent leaves after a while, unless selected or asked for", () => {
+    const done = {
+      ...agents[1],
+      state: "done",
+      lastEventAt: 1_000,
+    } as unknown as AgentView;
+    const f = {
+      ...floor,
+      agents: [agents[0], done, agents[2], agents[3]],
+    } as unknown as Floor;
+    const names = (show: Show) => order(groups(f, show)).map((a) => a.name);
+    expect(names({ now: 1_000 + LINGER - 1 })).toContain("sub");
+    expect(names({ now: 1_000 + LINGER })).not.toContain("sub");
+    expect(names({ now: 1_000 + LINGER, keep: done.ref })).toContain("sub");
+    expect(names({ now: 1_000 + LINGER, all: true })).toContain("sub");
+    expect(
+      groups(f, { now: 1_000 + LINGER }).find((g) => g.workspace.root === "/w")
+        ?.retired,
+    ).toBe(1);
   });
 });

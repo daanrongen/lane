@@ -82,7 +82,11 @@ export const FleetTable = ({
           >
             <Text>{baseName(g.workspace.root)}</Text>
             <Text size="small" tone="dim">
-              {[g.workspace.branch, plural(g.agents.length, "agent")]
+              {[
+                g.workspace.branch,
+                plural(g.agents.length, "agent"),
+                g.retired > 0 && `${g.retired} finished hidden`,
+              ]
                 .filter(Boolean)
                 .join(" · ")}
             </Text>

@@ -4,6 +4,23 @@ import type { AgentRef } from "@/domain/ids.ts";
 export interface Group {
   readonly workspace: WorkspaceView;
   readonly agents: readonly AgentView[];
+  // Finished sub-agents left out of `agents`.
+  readonly retired: number;
+}
+
+// How long a finished sub-agent stays in view (ms).
+export const LINGER = 30_000;
+
+const retired = (a: AgentView, now: number) =>
+  a.depth > 0 && a.state === "done" && now - (a.lastEventAt ?? 0) >= LINGER;
+
+export interface Show {
+  // Epoch ms.
+  readonly now: number;
+  // This agent stays even when it has finished.
+  readonly keep?: AgentRef;
+  // Show every sub-agent.
+  readonly all?: boolean;
 }
 
 // Roots by name with their sub-agents after them, so rows stay put while agents work.
@@ -16,14 +33,20 @@ const arranged = (agents: readonly AgentView[]) =>
       ...agents.filter((a) => a.depth > 0 && a.thread === root.thread),
     ]);
 
-export const groups = (floor: Floor): readonly Group[] => {
+export const groups = (floor: Floor, show: Show): readonly Group[] => {
   const byRef = new Map(floor.agents.map((a) => [a.ref, a]));
   return [...floor.workspaces]
     .sort((a, b) => a.root.localeCompare(b.root))
-    .map((workspace) => ({
-      workspace,
-      agents: arranged(workspace.agents.flatMap((r) => byRef.get(r) ?? [])),
-    }));
+    .map((workspace) => {
+      const all = workspace.agents.flatMap((r) => byRef.get(r) ?? []);
+      const gone = (a: AgentView) =>
+        !show.all && a.ref !== show.keep && retired(a, show.now);
+      return {
+        workspace,
+        agents: arranged(all.filter((a) => !gone(a))),
+        retired: all.filter(gone).length,
+      };
+    });
 };
 
 export const order = (gs: readonly Group[]) => gs.flatMap((g) => g.agents);

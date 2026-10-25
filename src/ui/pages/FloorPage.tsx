@@ -40,6 +40,7 @@ export const FloorPage = ({ ports, keys }: { ports: UiPorts; keys: Keys }) => {
   const [help, setHelp] = useState(false);
   const [lens, setLens] = useState<Lens>();
   const [onlyShared, setOnlyShared] = useState(false);
+  const [everyone, setEveryone] = useState(false);
   const [dismissed, setDismissed] = useState("");
   const [finding, setFinding] = useState<{ query: string; index: number }>();
   const r = responsive(size);
@@ -50,7 +51,10 @@ export const FloorPage = ({ ports, keys }: { ports: UiPorts; keys: Keys }) => {
 
   const half = r.compact ? total : Math.floor((total - r.pad) / 2);
 
-  const gs = useMemo(() => groups(floor), [floor]);
+  const gs = useMemo(
+    () => groups(floor, { now, keep: picked, all: everyone }),
+    [floor, now, picked, everyone],
+  );
   const agents = useMemo(() => order(gs), [gs]);
   // Selection is by identity, and goes when the agent does.
   const selected = agents.find((a) => a.ref === picked)?.ref;
@@ -108,6 +112,7 @@ export const FloorPage = ({ ports, keys }: { ports: UiPorts; keys: Keys }) => {
         }
         if (key === "?") setHelp(true);
         if (key === "t") setOnlyShared((on) => !on);
+        if (key === "a") setEveryone((on) => !on);
         if (key === "/") setFinding({ query: "", index: 0 });
         const go = (to: { ref: AgentRef } | undefined) =>
           to && setPicked(to.ref);
