@@ -67,15 +67,6 @@ describe("board", () => {
     expect(b.next.map((c) => c.title)).toEqual(["c"]);
   });
 
-  test("an explicit task list replaces the plan's steps", () => {
-    const both = board(run({}), [
-      task("plan", "step", "next"),
-      task("todo", "real", "next"),
-    ]);
-    expect(both.next.map((c) => c.title)).toEqual(["real"]);
-    expect(board(run({}), [task("plan", "step", "next")]).next).toHaveLength(1);
-  });
-
   test("an open call is what the agent is doing now", () => {
     const b = board(
       run({

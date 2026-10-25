@@ -208,7 +208,6 @@ const SOURCES: Record<Task["source"], string> = {
   agent: "spawned agent",
   now: "in progress right now",
   todo: "task list",
-  plan: "approved plan",
   queue: "queued prompt",
   goal: "goal",
 };

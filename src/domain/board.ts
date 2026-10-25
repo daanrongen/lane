@@ -43,14 +43,7 @@ const running = (run: Run): Task[] =>
 
 // What the agents have done, are doing, and have lined up next: their own task lists plus what the run shows.
 export const board = (run: Run, lists: readonly Task[]): Board => {
-  // A plan's steps are never ticked off, so an explicit task list replaces them.
-  const explicit = new Set(
-    lists.filter((t) => t.source === "todo").map((t) => t.owner),
-  );
-  const kept = lists.filter(
-    (t) => t.source !== "plan" || !explicit.has(t.owner),
-  );
-  const all = [...delegated(run), ...running(run), ...kept];
+  const all = [...delegated(run), ...running(run), ...lists];
   const by = (status: TaskStatus) => all.filter((t) => t.status === status);
   return {
     done: by("done").sort((a, b) => b.since - a.since),
