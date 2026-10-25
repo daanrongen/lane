@@ -2,7 +2,7 @@ import { useMemo } from "react";
 import type { Act } from "@/domain/act.ts";
 import type { Asset } from "@/domain/assets.ts";
 import { contextMap } from "@/domain/context.ts";
-import type { AgentView } from "@/domain/floor.ts";
+import type { AgentView, Floor } from "@/domain/floor.ts";
 import { agentOf } from "@/domain/ids.ts";
 import { mcpServers } from "@/domain/mcp.ts";
 import { hosts } from "@/domain/network.ts";
@@ -16,6 +16,7 @@ import { clip, exact, modelName } from "@/ui/lib/format.ts";
 import { stateLook } from "@/ui/lib/look.ts";
 import { skillChips } from "@/ui/lib/usageRows.ts";
 import { ContextMap } from "@/ui/organisms/ContextMap.tsx";
+import { MachinePanel } from "@/ui/organisms/MachinePanel.tsx";
 import { McpServers } from "@/ui/organisms/McpServers.tsx";
 import { NetworkHosts } from "@/ui/organisms/NetworkHosts.tsx";
 import { UsageRow } from "@/ui/organisms/UsageRow.tsx";
@@ -140,6 +141,7 @@ const Plan = ({
 
 // The selected agent side by side: what it is doing, what fills its context, what it intends, how it is set up.
 export const DetailPanel = ({
+  floor,
   agent,
   run,
   tasks,
@@ -147,6 +149,7 @@ export const DetailPanel = ({
   now,
   width,
 }: {
+  floor: Floor;
   agent?: AgentView;
   run?: Run;
   tasks: readonly Task[];
@@ -179,12 +182,11 @@ export const DetailPanel = ({
     [run, id, assets],
   );
   const theme = useTheme();
-  if (!agent || !run) {
+  if (!agent) return <MachinePanel floor={floor} width={width} />;
+  if (!run) {
     return (
       <Text tone="dim" style={{ paddingLeft: r.dot }}>
-        {agent
-          ? "no transcript for this agent"
-          : "select an agent to see what it is doing"}
+        no transcript for this agent
       </Text>
     );
   }

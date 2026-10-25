@@ -178,6 +178,7 @@ export const FloorPage = ({ ports, keys }: { ports: UiPorts; keys: Keys }) => {
             />
           </Box>
           <DetailPanel
+            floor={floor}
             agent={agent}
             run={opened ? run : undefined}
             tasks={tasks}
