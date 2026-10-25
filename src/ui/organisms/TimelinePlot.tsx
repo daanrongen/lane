@@ -77,6 +77,7 @@ export const TimelinePlot = ({ frame }: { frame: Frame }) => {
         return [
           ...link.lines.map((box, k) => (
             <Rule
+              // biome-ignore lint/suspicious/noArrayIndexKey: the boxes have no id
               key={`${link.link.to}:line:${k}`}
               box={box}
               color={alpha(color, 0.8)}
@@ -84,6 +85,7 @@ export const TimelinePlot = ({ frame }: { frame: Frame }) => {
           )),
           ...link.dots.map((box, k) => (
             <Rule
+              // biome-ignore lint/suspicious/noArrayIndexKey: the boxes have no id
               key={`${link.link.to}:dot:${k}`}
               box={box}
               color={color}

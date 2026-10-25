@@ -36,7 +36,7 @@ const useOpened = (ports: UiPorts, session: Session | undefined) => {
   const latest = useRef(session);
   latest.current = session;
   const key = session && `${session.harness}:${session.id}`;
-  // Polls replace the session objects, so only the key decides when to reopen.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: polls replace the session objects, so only the key decides when to reopen
   useEffect(() => {
     const target = latest.current;
     if (!target) return;
@@ -112,6 +112,7 @@ export const DashboardPage = ({
     if (next) setPickedKey(keyOf(next));
   };
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: `go` reads the latest selection from a ref
   useEffect(
     () =>
       keys.subscribe((key) => {
@@ -124,7 +125,6 @@ export const DashboardPage = ({
         if (key === "-") setZoom((z) => clampZoom(z - ZOOM.step));
         if (key === "0") setZoom(1);
       }),
-    // `go` reads the latest selection from a ref.
     [keys],
   );
 
