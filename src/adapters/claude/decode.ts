@@ -251,7 +251,8 @@ export const makeDecoder = (cfg: DecoderConfig): Decoder => {
     const events: RunEvent[] = [];
     const id = str(msg.id);
     // Every content block is its own line and repeats the message usage.
-    if (id && !turns.has(id)) {
+    // Placeholder lines (interrupts, errors) carry no model and are not turns.
+    if (id && !turns.has(id) && msg.model !== "<synthetic>") {
       turns.add(id);
       events.push({
         _tag: "TurnReported",

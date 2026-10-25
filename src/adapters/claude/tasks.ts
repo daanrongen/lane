@@ -3,9 +3,9 @@ import { ClaudeHome } from "@/adapters/claude/ClaudeHome.ts";
 import { locateTranscript } from "@/adapters/claude/locate.ts";
 import { arr, type Json, parseJson, rec, str } from "@/adapters/shared/json.ts";
 import { startOf } from "@/adapters/shared/origin.ts";
-import { planItems, statusOf } from "@/adapters/shared/planText.ts";
 import { tail } from "@/adapters/shared/tail.ts";
 import { taskLists } from "@/adapters/shared/taskLists.ts";
+import { statusOf } from "@/adapters/shared/taskStatus.ts";
 import { AgentId } from "@/domain/ids.ts";
 import type { Task } from "@/domain/task.ts";
 import { SourceError } from "@/ports/SourceError.ts";
@@ -13,7 +13,7 @@ import { TaskRepository } from "@/ports/TaskRepository.ts";
 
 const ROOT = AgentId("main");
 
-// The root agent's task lists: an approved plan, TodoWrite, and the prompts waiting in the queue.
+// The root agent's task lists: TodoWrite and the prompts waiting in the queue.
 export const makeTaskDecoder = (origin: number) => {
   const lists = taskLists(ROOT);
   // Prompts typed while the agent was busy; hand-backs from sub-agents are not shown.
@@ -37,9 +37,6 @@ export const makeTaskDecoder = (origin: number) => {
 
   const toolUse = (block: Json, at: number) => {
     const input = rec(block.input);
-    if (block.name === "ExitPlanMode") {
-      return lists.set("plan", at, planItems(str(input?.plan) ?? ""));
-    }
     if (block.name === "TodoWrite") {
       const items = arr(input?.todos).flatMap((t) => {
         const title = str(rec(t)?.content);

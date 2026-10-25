@@ -22,17 +22,15 @@ const queue = (s: number, operation: string, content?: string) => ({
 });
 
 describe("claude task decoder", () => {
-  test("an approved plan becomes next steps", () => {
+  test("an approved plan is not a task list", () => {
     const decode = makeTaskDecoder(origin);
-    const tasks = decode(
-      assistant(1, "m1", [
-        toolUse("t1", "ExitPlanMode", { plan: "## 1. Build\n## 2. Ship" }),
-      ]),
-    );
-    expect(tasks?.map((t) => [t.source, t.title, t.status])).toEqual([
-      ["plan", "Build", "next"],
-      ["plan", "Ship", "next"],
-    ]);
+    expect(
+      decode(
+        assistant(1, "m1", [
+          toolUse("t1", "ExitPlanMode", { plan: "## 1. Build\n## 2. Ship" }),
+        ]),
+      ),
+    ).toBeUndefined();
   });
 
   test("TodoWrite replaces the list; items keep when they reached their status", () => {

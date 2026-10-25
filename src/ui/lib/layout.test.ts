@@ -9,6 +9,7 @@ import { layout } from "@/ui/lib/layout.ts";
 
 const m = {
   plotWidth: 1000,
+  pxPerSecond: 0,
   rowHeight: 40,
   barHeight: 20,
   tickEvery: 100,
@@ -16,9 +17,9 @@ const m = {
 };
 const idle = { maxIdle: 60, collapsedTo: 2 };
 
-const frameOf = (run: Run, plotWidth = m.plotWidth) => {
+const frameOf = (run: Run, plotWidth = m.plotWidth, pxPerSecond = 0) => {
   const tl = timeline(run, 0);
-  return layout(tl, makeAxis(tl, idle), { ...m, plotWidth });
+  return layout(tl, makeAxis(tl, idle), { ...m, plotWidth, pxPerSecond });
 };
 
 const span = (
@@ -120,6 +121,22 @@ describe("layout axis", () => {
     const f = frameOf(single(thinking("a", 0, 100)), 300);
     for (const l of f.labels)
       expect(l.x + l.text.length * m.charWidth).toBeLessThanOrEqual(300);
+  });
+});
+
+describe("layout scrolling", () => {
+  const run = single(thinking("a", 0, 100));
+  const widthOf = (f: ReturnType<typeof frameOf>) => f.rows[0]?.bars[0]?.width;
+
+  test("a short run fills the window", () => {
+    expect(frameOf(run, 300, 1).width).toBe(300);
+  });
+
+  test("a long run grows past the window at a fixed block size", () => {
+    const narrow = frameOf(run, 300, 5);
+    const wide = frameOf(run, 400, 5);
+    expect(narrow.width).toBe(500);
+    expect(widthOf(narrow)).toBe(widthOf(wide));
   });
 });
 

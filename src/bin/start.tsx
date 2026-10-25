@@ -23,6 +23,8 @@ export const start = async (
   const scheme = await watchScheme();
 
   render(<App ports={ports} scheme={scheme} keys={keys} />, {
+    title: "Lane",
+    appName: "Lane",
     terminal: resolveMode(process.argv.slice(2), process.env) === "terminal",
     onKeyDown: (event) => {
       if (event.key === "q") process.exit(0);

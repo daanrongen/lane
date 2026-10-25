@@ -3,7 +3,7 @@ import type { AgentId } from "@/domain/ids.ts";
 export type TaskStatus = "next" | "doing" | "done";
 
 // Where a task came from: a list the harness keeps, work handed to an agent, or what is running now.
-export type TaskSource = "todo" | "plan" | "queue" | "goal" | "agent" | "now";
+export type TaskSource = "todo" | "queue" | "goal" | "agent" | "now";
 
 export interface TaskItem {
   readonly title: string;
