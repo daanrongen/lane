@@ -38,6 +38,20 @@ lane
 | `--terminal` | `LANE_MODE=terminal` | render in this terminal |
 | `--window` | `LANE_MODE=window` | open a native window |
 
+## Commands
+
+Read-only queries that print and exit, without opening the app. Output is a table in a terminal and JSON when piped; `--json` or `--format table|json|ndjson` choose it.
+
+| Command | Shows |
+| --- | --- |
+| `lane status` | agents by state, who needs you, tokens and spend (`--line` for a prompt) |
+| `lane threads ls` / `show <thread>` | threads of every harness, newest first; one thread's workspace, usage, models and agents |
+| `lane tasks ls [thread]` / `next` | what each agent is doing and has lined up next |
+| `lane agents ls` / `show <agent>` | every agent with state, model, context fill, cost and what it is doing now |
+| `lane attention` | who needs you, is stalled or failed (`--exit-code` exits 1 when anyone does) |
+
+A `<thread>` is an id, `harness:id`, an id prefix, a directory or part of a name. `lane <command> --help` lists the filters (`--harness`, `-w`, `-n`, `--all`, ...) and `lane --completions zsh` prints shell completions.
+
 ## From source
 
 Requires Bun.
@@ -46,6 +60,7 @@ Requires Bun.
 bun install
 bun run demo   # a looping scenario across several harnesses
 bun run live   # real local threads and processes
+bun run cli threads ls
 ```
 
 ## Keys
@@ -72,7 +87,8 @@ Hexagonal, under `src/`:
 - `adapters/`: claude, codex (reads SQLite for goals, queued prompts and spawned threads), agents, ollama (assets and the loaded-model runtime), macOS appearance and notifications, process and git workspace detection, and in-memory fakes, including a scenario that plays many harnesses' work in real time
 - `app/`: SessionsStore, Fleet (one floor of every live thread and process), Layers, the bridge to UI ports
 - `ui/`: atoms, molecules, organisms, pages, templates
-- `bin/`: entry points (start, demo, live, shot, binary, native)
+- `cli/`: the headless commands, built on `effect/cli`, reading one snapshot through `app/Snapshot`
+- `bin/`: entry points (main routes to `cli/` or the app; start, demo, live, shot, native)
 
 Built with `@gpuix/react` and `@gpuix/native`, React 19, Bun, Effect 4, d3-scale and d3-hierarchy.
 

@@ -33,25 +33,29 @@ import { harness, harnessesOf } from "@/ports/Harness.ts";
 
 const sessionPoll = Schedule.spaced("1 second");
 
-const claude = harness(
-  "claude",
-  Layer.mergeAll(
-    ThreadRepositoryFs(processAlive),
-    RunSourceFs(Schedule.spaced("500 millis")),
-    TaskRepositoryFs(Schedule.spaced("500 millis")),
-  ).pipe(Layer.provide(ClaudeHome.default)),
-  claudeProfile,
-);
+const claudeWith = (poll: Schedule.Schedule<unknown>) =>
+  harness(
+    "claude",
+    Layer.mergeAll(
+      ThreadRepositoryFs(processAlive),
+      RunSourceFs(poll),
+      TaskRepositoryFs(poll),
+    ).pipe(Layer.provide(ClaudeHome.default)),
+    claudeProfile,
+  );
 
-const codex = harness(
-  "codex",
-  Layer.mergeAll(
-    ThreadRepositoryCodex,
-    RunSourceCodex(Schedule.spaced("500 millis")),
-    TaskRepositoryCodex(Schedule.spaced("500 millis")),
-  ).pipe(Layer.provide(CodexHome.default)),
-  codexProfile,
-);
+const codexWith = (poll: Schedule.Schedule<unknown>) =>
+  harness(
+    "codex",
+    Layer.mergeAll(
+      ThreadRepositoryCodex,
+      RunSourceCodex(poll),
+      TaskRepositoryCodex(poll),
+    ).pipe(Layer.provide(CodexHome.default)),
+    codexProfile,
+  );
+
+const follow = Schedule.spaced("500 millis");
 
 // The agent harnesses on this machine, followed live.
 const liveAssets = assetsOf(
@@ -63,7 +67,19 @@ const liveAssets = assetsOf(
 
 export const LiveLayer = FleetLive({ profiles: [ollamaProfile] }).pipe(
   Layer.provideMerge(SessionsStoreLive(sessionPoll)),
-  Layer.provideMerge(harnessesOf(claude, codex)),
+  Layer.provideMerge(harnessesOf(claudeWith(follow), codexWith(follow))),
+  Layer.provideMerge(liveAssets),
+  Layer.provideMerge(ProcessProbePs),
+  Layer.provideMerge(WorkspacesFs),
+  Layer.provideMerge(RuntimesOllama()),
+  Layer.provide(BunFileSystem.layer),
+);
+
+// Reads every harness once and stops, for commands that print and exit.
+export const SnapshotLayer = harnessesOf(
+  claudeWith(Schedule.once),
+  codexWith(Schedule.once),
+).pipe(
   Layer.provideMerge(liveAssets),
   Layer.provideMerge(ProcessProbePs),
   Layer.provideMerge(WorkspacesFs),
