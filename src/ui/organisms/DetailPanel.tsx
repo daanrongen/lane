@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import type { Act } from "@/domain/act.ts";
+import type { Act, Approval } from "@/domain/act.ts";
 import type { Asset } from "@/domain/assets.ts";
 import { contextMap } from "@/domain/context.ts";
 import type { AgentView, Floor } from "@/domain/floor.ts";
@@ -12,7 +12,7 @@ import type { Task } from "@/domain/task.ts";
 import { Column, Row } from "@/ui/atoms/Box.tsx";
 import { Text } from "@/ui/atoms/Text.tsx";
 import { useMetrics, useTheme } from "@/ui/lib/context.ts";
-import { clip, exact, modelName } from "@/ui/lib/format.ts";
+import { clip, duration, exact, modelName } from "@/ui/lib/format.ts";
 import { stateLook } from "@/ui/lib/look.ts";
 import { skillChips } from "@/ui/lib/usageRows.ts";
 import { ContextMap } from "@/ui/organisms/ContextMap.tsx";
@@ -28,6 +28,10 @@ const Heading = ({ children }: { children: string }) => (
     {children}
   </Text>
 );
+
+// Calls a classifier or the mode waved through are not worth a line.
+const notable = (a: Approval) =>
+  a.outcome === "deny" || a.by === "user" || a.by === "rule";
 
 const ActLine = ({ act, now }: { act: Act; now: number }) => {
   const r = useMetrics();
@@ -51,6 +55,18 @@ const ActLine = ({ act, now }: { act: Act; now: number }) => {
           {exact((act.end ?? now) - act.start)}
         </Text>
       </Row>
+      {act.approval && notable(act.approval) ? (
+        <Text size="small" tone="dim">
+          {[
+            `${act.approval.outcome === "allow" ? "allowed" : "denied"} by ${act.approval.by}`,
+            act.approval.rule,
+            act.approval.waited !== undefined &&
+              `after ${duration(act.approval.waited)}`,
+          ]
+            .filter(Boolean)
+            .join(" · ")}
+        </Text>
+      ) : null}
       {act.failure ? (
         <Text size="small" style={{ color: theme.failed }}>
           {`${act.failure.class}: ${clip(act.failure.reason, 60)}`}

@@ -17,8 +17,9 @@ import {
   hostRefs,
   touchEvents,
 } from "@/adapters/shared/touches.ts";
+import type { Approval } from "@/domain/act.ts";
 import type { RunEvent } from "@/domain/events.ts";
-import { AgentId, SpanId } from "@/domain/ids.ts";
+import { ActId, AgentId, SpanId } from "@/domain/ids.ts";
 import { mcpName } from "@/domain/mcp.ts";
 import { providerOf } from "@/domain/models.ts";
 import { type Target, targetsOfCommand } from "@/domain/network.ts";
@@ -109,6 +110,34 @@ const sourceOf = (
   return { kind: "File", label: `${dir}/` };
 };
 
+// Who let a call through, as the result line records it.
+const approvalOf = (d: Json | undefined): Approval | undefined => {
+  const decision = str(d?.decision);
+  if (!decision) return undefined;
+  const reason = str(d?.reasonType);
+  const by = str(d?.source)?.startsWith("user")
+    ? "user"
+    : reason === "classifier" || reason === "rule"
+      ? reason
+      : "policy";
+  return {
+    by,
+    rule: by === "rule" ? str(d?.ruleSource) : undefined,
+    outcome: decision === "accept" ? "allow" : "deny",
+  };
+};
+
+const STEP = /^\s*(?:[-*]|\d+[.)])\s+(.+)$/;
+
+// A plan in markdown: the first line is the title, the list items are the steps.
+const planOf = (text: string) => {
+  const lines = text.split("\n").filter((l) => l.trim());
+  return {
+    title: (lines[0] ?? "plan").replace(/^#+\s*/, "").slice(0, 80),
+    steps: lines.flatMap((l) => STEP.exec(l)?.[1]?.slice(0, 100) ?? []),
+  };
+};
+
 const usageOf = (u: Json | undefined): Usage => ({
   input: num(u?.input_tokens),
   output: num(u?.output_tokens),
@@ -123,7 +152,9 @@ export const makeDecoder = (cfg: DecoderConfig): Decoder => {
   const ended = new Set<string>();
   const spans = new Map<string, boolean>(); // tool_use id -> closed
   const sources = new Map<string, Pick<Entry, "kind" | "label">>();
+  const plans = new Set<string>();
   let permission: string | undefined;
+  let effort: string | undefined;
   let announced = false;
   let boundary: number | undefined;
   let last = 0;
@@ -222,10 +253,34 @@ export const makeDecoder = (cfg: DecoderConfig): Decoder => {
       return [
         ...entry,
         ...called(id, name, input, at),
+        ...proposed(id, name, input, at),
         ...touchEvents(id, touchesOf(name, input, targetsOf(name, input))),
       ];
     pending.set(id, { name, input, at });
     return [...entry, ...resolve(id, false)];
+  };
+
+  const proposed = (
+    id: string,
+    name: string,
+    input: Json | undefined,
+    at: number,
+  ): RunEvent[] => {
+    const text = name === "ExitPlanMode" ? str(input?.plan) : undefined;
+    if (!text) return [];
+    plans.add(id);
+    return [
+      {
+        _tag: "PlanProposed",
+        plan: {
+          id,
+          agentId,
+          at,
+          status: "proposed",
+          ...planOf(text),
+        },
+      },
+    ];
   };
 
   // The tool calls that name a skill.
@@ -300,6 +355,14 @@ export const makeDecoder = (cfg: DecoderConfig): Decoder => {
         },
       });
     }
+    const level = str(line.effort);
+    if (level && level !== effort) {
+      effort = level;
+      events.push({
+        _tag: "ModeChanged",
+        change: { agentId, at, kind: "effort", value: level },
+      });
+    }
     for (const b of arr(msg.content)) {
       const block = rec(b);
       if (
@@ -342,7 +405,25 @@ export const makeDecoder = (cfg: DecoderConfig): Decoder => {
     return events;
   };
 
-  const user = (msg: Json, at: number): RunEvent[] =>
+  const decided = (line: Json, id: string, failed: boolean): RunEvent[] => {
+    const approval = approvalOf(rec(line.permissionDecision));
+    return [
+      ...(approval
+        ? [{ _tag: "ActUpdated", id: ActId(id), approval } as const]
+        : []),
+      ...(plans.has(id)
+        ? [
+            {
+              _tag: "PlanDecided",
+              id,
+              status: failed ? "rejected" : "approved",
+            } as const,
+          ]
+        : []),
+    ];
+  };
+
+  const user = (line: Json, msg: Json, at: number): RunEvent[] =>
     (typeof msg.content === "string"
       ? [{ type: "text", text: msg.content }]
       : arr(msg.content)
@@ -363,6 +444,7 @@ export const makeDecoder = (cfg: DecoderConfig): Decoder => {
           IMAGE_TOKENS * 4 * imagesIn(block.content),
         ),
         ...resolve(id, true),
+        ...decided(line, id, block?.is_error === true),
         {
           _tag: "SpanClosed",
           spanId: SpanId(id),
@@ -406,7 +488,9 @@ export const makeDecoder = (cfg: DecoderConfig): Decoder => {
       announced = true;
       events.push(
         ...settle(false),
-        ...(type === "assistant" ? assistant(line, msg, at) : user(msg, at)),
+        ...(type === "assistant"
+          ? assistant(line, msg, at)
+          : user(line, msg, at)),
       );
       boundary = at;
       last = at;

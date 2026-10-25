@@ -400,3 +400,82 @@ describe("how the work is steered", () => {
     expect(run.turns[0]?.provider).toBe("ollama");
   });
 });
+
+describe("what the result and the turn say", () => {
+  const withDecision = (id: string, permissionDecision: object) => ({
+    ...result(3, id),
+    permissionDecision,
+  });
+
+  test("who let a call through becomes its approval", () => {
+    const run = foldAll(
+      emptyRun(ThreadId("t"), 0),
+      decodeAll(cfg, [
+        assistant(1, "m1", [
+          toolUse("a", "Bash", { command: "ls" }),
+          toolUse("b", "Bash", { command: "rm x" }),
+        ]),
+        withDecision("a", {
+          decision: "accept",
+          source: "config",
+          reasonType: "rule",
+          ruleSource: "userSettings",
+        }),
+        withDecision("b", { decision: "reject", source: "user_reject" }),
+      ]),
+    );
+    expect(run.acts.map((a) => a.approval)).toEqual([
+      { by: "rule", rule: "userSettings", outcome: "allow" },
+      { by: "user", outcome: "deny" },
+    ]);
+  });
+
+  test("a classifier or a mode decides for the policy", () => {
+    const run = foldAll(
+      emptyRun(ThreadId("t"), 0),
+      decodeAll(cfg, [
+        assistant(1, "m1", [toolUse("a", "Bash"), toolUse("b", "Bash")]),
+        withDecision("a", {
+          decision: "accept",
+          reasonType: "classifier",
+        }),
+        withDecision("b", { decision: "accept", reasonType: "mode" }),
+      ]),
+    );
+    expect(run.acts.map((a) => a.approval?.by)).toEqual([
+      "classifier",
+      "policy",
+    ]);
+  });
+
+  test("effort is a mode, reported when it changes", () => {
+    const at = (s: number, id: string, effort: string) => ({
+      ...assistant(s, id, [{ type: "text" }]),
+      effort,
+    });
+    const modes = decodeAll(cfg, [
+      at(1, "m1", "medium"),
+      at(2, "m2", "medium"),
+      at(3, "m3", "high"),
+    ]).filter((e) => e._tag === "ModeChanged");
+    expect(modes.map((m) => m.change.value)).toEqual(["medium", "high"]);
+  });
+
+  test("ExitPlanMode proposes a plan, and the answer decides it", () => {
+    const plan = "# Add tiers\n- schema\n- api\n2. ui";
+    const exit = (isError: boolean) =>
+      foldAll(
+        emptyRun(ThreadId("t"), 0),
+        decodeAll(cfg, [
+          assistant(1, "m1", [toolUse("p", "ExitPlanMode", { plan })]),
+          result(5, "p", isError),
+        ]),
+      ).plans[0];
+    expect(exit(false)).toMatchObject({
+      title: "Add tiers",
+      steps: ["schema", "api", "ui"],
+      status: "approved",
+    });
+    expect(exit(true)?.status).toBe("rejected");
+  });
+});
