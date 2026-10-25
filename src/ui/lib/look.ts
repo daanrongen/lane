@@ -1,5 +1,7 @@
 import type { StyleDesc } from "@gpuix/react";
+import type { AgentState } from "@/domain/agent.ts";
 import type { CellKind } from "@/domain/context.ts";
+import type { LaneBar } from "@/domain/floor.ts";
 import type { HarnessId } from "@/domain/thread.ts";
 import type { Bar } from "@/domain/timeline.ts";
 import { alpha, type Theme } from "@/ui/lib/theme.ts";
@@ -97,3 +99,41 @@ export const modeColor = (value: string, theme: Theme) =>
     "on-failure": theme.agents[0],
     untrusted: theme.agents[2],
   })[value] ?? theme.dim;
+
+// Each state has its own glyph, so colour is never the only signal.
+export const stateLook = (state: AgentState, theme: Theme) =>
+  ({
+    working: { glyph: "●", color: theme.running },
+    waiting: { glyph: "◌", color: theme.dim },
+    "needs-you": { glyph: "◆", color: theme.agents[2] ?? theme.text },
+    stalled: { glyph: "◐", color: theme.agents[2] ?? theme.text },
+    failed: { glyph: "✕", color: theme.failed },
+    idle: { glyph: "○", color: theme.dim },
+    done: { glyph: "✓", color: theme.dim },
+  })[state];
+
+// A bar on an agent's lane: thinking is faint, a call that waits on a person is dashed.
+export const laneLook = (
+  bar: LaneBar,
+  color: string,
+  theme: Theme,
+): StyleDesc => {
+  if (bar.failed) return barLook("ToolCall", true, color, theme);
+  if (bar.awaiting) return barLook("Waiting", false, color, theme);
+  if (bar.kind === "think") return barLook("Thinking", false, color, theme);
+  if (bar.kind === "spawn") return barLook("Waiting", false, color, theme);
+  return barLook(
+    bar.kind === "mcp" ? "McpCall" : "ToolCall",
+    false,
+    color,
+    theme,
+  );
+};
+
+export const INSIGHT_GLYPH = {
+  loop: "⟳",
+  "retry-storm": "↻",
+  "near-full": "▰",
+  collision: "⚠",
+  "rate-limited": "⏳",
+} as const;

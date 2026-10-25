@@ -3,7 +3,7 @@ import { ThemeContext } from "@/ui/lib/context.ts";
 import { useStore } from "@/ui/lib/hooks/useStore.ts";
 import type { Keys, Scheme, Store, UiPorts } from "@/ui/lib/ports.ts";
 import { themes } from "@/ui/lib/theme.ts";
-import { DashboardPage } from "@/ui/pages/DashboardPage.tsx";
+import { FloorPage } from "@/ui/pages/FloorPage.tsx";
 
 export const App = ({
   ports,
@@ -16,7 +16,7 @@ export const App = ({
 }) => (
   <ThemeContext.Provider value={themes[useStore(scheme)]}>
     <Tooltip.Provider delayDuration={120}>
-      <DashboardPage ports={ports} keys={keys} />
+      <FloorPage ports={ports} keys={keys} />
     </Tooltip.Provider>
   </ThemeContext.Provider>
 );
