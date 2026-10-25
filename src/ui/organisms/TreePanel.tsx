@@ -3,7 +3,13 @@ import { useMemo } from "react";
 import type { AgentView, Floor, WorkspaceView } from "@/domain/floor.ts";
 import type { AgentRef } from "@/domain/ids.ts";
 import { file, folder, type Ref } from "@/domain/ref.ts";
-import { shared, type TreeNode } from "@/domain/tree.ts";
+import {
+  condense,
+  leafCount,
+  nodeCount,
+  shared,
+  type TreeNode,
+} from "@/domain/tree.ts";
 import { baseName } from "@/domain/workspace.ts";
 import { Column, Row } from "@/ui/atoms/Box.tsx";
 import { Text } from "@/ui/atoms/Text.tsx";
@@ -16,7 +22,8 @@ const RECENT = 120_000;
 
 const Workspace = ({
   space,
-  tree,
+  full,
+  rows,
   agents,
   now,
   width,
@@ -24,7 +31,9 @@ const Workspace = ({
   onPick,
 }: {
   space: WorkspaceView;
-  tree: TreeNode;
+  full: TreeNode;
+  // Rows this workspace may take; the rest of its files are counted, not drawn.
+  rows: number;
   agents: ReadonlyMap<AgentRef, AgentView>;
   now: number;
   width: number;
@@ -33,11 +42,15 @@ const Workspace = ({
 }) => {
   const r = useMetrics();
   const theme = useTheme();
-  const depth = depthOf(tree);
   const wide = Math.round(r.charWidth * 9);
   const label = wide + r.dot * 7;
+  const tight = useMemo(() => condense(full, rows, leafCount), [full, rows]);
   // Too deep to grow sideways: list it, indented.
-  const stacked = depth * label > width - r.dot * 2;
+  const stacked = depthOf(tight) * label > width - r.dot * 2;
+  const tree = useMemo(
+    () => (stacked ? condense(full, rows, nodeCount) : tight),
+    [stacked, full, rows, tight],
+  );
   const name = stacked ? Math.round(r.charWidth * 18) : wide;
   const frame = useMemo(
     () =>
@@ -90,6 +103,23 @@ const Workspace = ({
           const here = Object.entries(node.agents);
           const mine = selected !== undefined && selected in node.agents;
           const color = node.collided ? theme.failed : theme.text;
+          if (node.kind === "file" && node.more !== undefined) {
+            return (
+              <Text
+                key={node.path}
+                size="small"
+                tone="dim"
+                style={{
+                  position: "absolute",
+                  left: x + size + Math.round(r.dot / 2),
+                  top: y - r.row / 2,
+                  height: r.row,
+                }}
+              >
+                {`+${node.more} more`}
+              </Text>
+            );
+          }
           return (
             <Button
               key={node.path}
@@ -128,6 +158,11 @@ const Workspace = ({
               >
                 {node.name}
               </Text>
+              {node.more !== undefined ? (
+                <Text size="small" tone="dim">
+                  {`${node.more} ${node.more === 1 ? "file" : "files"}`}
+                </Text>
+              ) : null}
               {here.slice(0, 3).map(([ref, p]) => {
                 const agent = agents.get(ref as AgentRef);
                 return (
@@ -167,8 +202,11 @@ export const TreePanel = ({
   width,
   selected,
   onlyShared,
+  rows,
   onPick,
 }: {
+  // Rows to share between the workspaces.
+  rows: number;
   floor: Floor;
   now: number;
   width: number;
@@ -191,6 +229,10 @@ export const TreePanel = ({
         }),
     [floor.workspaces, onlyShared],
   );
+  const total = Math.max(
+    1,
+    spaces.reduce((n, { tree }) => n + tree.weight, 0),
+  );
   return (
     <Column style={{ width, flexShrink: 0 }}>
       <Row style={{ height: r.row, paddingLeft: r.dot }}>
@@ -207,7 +249,8 @@ export const TreePanel = ({
           <Workspace
             key={space.root}
             space={space}
-            tree={tree}
+            full={tree}
+            rows={Math.max(3, Math.round((rows * tree.weight) / total))}
             agents={agents}
             now={now}
             width={width}

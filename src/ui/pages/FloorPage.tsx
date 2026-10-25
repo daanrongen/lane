@@ -56,6 +56,15 @@ export const FloorPage = ({ ports, keys }: { ports: UiPorts; keys: Keys }) => {
     [floor, now, picked, everyone],
   );
   const agents = useMemo(() => order(gs), [gs]);
+  // Beside the fleet the tree may be as tall as the fleet; stacked it gets a fixed few rows.
+  const treeRows = r.compact
+    ? 10
+    : Math.max(
+        12,
+        gs.reduce((n, g) => n + 1 + g.agents.length, 0) +
+          floor.runtimes.reduce((n, rt) => n + 1 + rt.models.length, 0) -
+          floor.workspaces.length,
+      );
   // Selection is by identity, and goes when the agent does.
   const selected = agents.find((a) => a.ref === picked)?.ref;
 
@@ -179,6 +188,7 @@ export const FloorPage = ({ ports, keys }: { ports: UiPorts; keys: Keys }) => {
               width={r.compact ? total : total - fleetWidth - r.pad}
               selected={selected}
               onlyShared={onlyShared}
+              rows={treeRows}
               onPick={(ref) => setLens({ what: { ref } })}
             />
           </Box>

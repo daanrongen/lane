@@ -1,6 +1,13 @@
 import { describe, expect, test } from "bun:test";
 import { AgentRef } from "@/domain/ids.ts";
-import { fileTree, shared, type Touch } from "@/domain/tree.ts";
+import {
+  condense,
+  fileTree,
+  leafCount,
+  nodeCount,
+  shared,
+  type Touch,
+} from "@/domain/tree.ts";
 import { baseName, resolvePath, within } from "@/domain/workspace.ts";
 
 const a = AgentRef("claude", "t1", "main");
@@ -94,5 +101,62 @@ describe("shared", () => {
   test("nothing shared leaves nothing", () => {
     const tree = fileTree("/w/api", [touch(a, "/w/api/x.ts")]);
     expect(shared(tree)).toBeUndefined();
+  });
+});
+
+describe("condense", () => {
+  const many = fileTree("/w/api", [
+    touch(a, "/w/api/src/a.ts", 1, 1),
+    touch(a, "/w/api/src/b.ts", 1, 2),
+    touch(a, "/w/api/lib/d.ts", 1, 9),
+    touch(a, "/w/api/lib/e.ts", 1, 4),
+    touch(a, "/w/api/docs/x.md", 1, 3),
+  ]);
+  const names = (t: unknown) => JSON.stringify(t);
+
+  test("a tree that fits is left alone", () => {
+    expect(condense(many, 10, leafCount)).toBe(many);
+  });
+
+  test("closed folders stand for their files, the hottest open first", () => {
+    const t = condense(many, 4, leafCount);
+    expect(leafCount(t)).toBeLessThanOrEqual(4);
+    expect(names(t)).toContain("d.ts");
+    expect(names(t)).not.toContain("a.ts");
+    expect(t.children.find((c) => c.name === "src")?.more).toBe(2);
+  });
+
+  test("a folder with many files shows the newest and counts the rest", () => {
+    const wide = fileTree(
+      "/w/api",
+      [1, 2, 3, 4, 5, 6].map((i) => touch(a, `/w/api/f${i}.ts`, 1, i)),
+    );
+    const t = condense(wide, 4, leafCount);
+    expect(t.children.map((c) => c.name)).toEqual([
+      "f6.ts",
+      "f5.ts",
+      "f4.ts",
+      "+3",
+    ]);
+  });
+
+  test("a collided folder opens before a newer one", () => {
+    const tree = fileTree(
+      "/w/api",
+      [
+        touch(a, "/w/api/old/x.ts", 1, 1),
+        touch(a, "/w/api/old/y.ts", 1, 1),
+        touch(a, "/w/api/new/z.ts", 1, 9),
+        touch(a, "/w/api/new/w.ts", 1, 9),
+      ],
+      new Set(["/w/api/old/x.ts"]),
+    );
+    const t = condense(tree, 3, leafCount);
+    expect(names(t)).toContain("x.ts");
+    expect(t.children.find((c) => c.name === "new")?.more).toBe(2);
+  });
+
+  test("it can measure rows as nodes for a tree that is listed", () => {
+    expect(nodeCount(condense(many, 5, nodeCount))).toBeLessThanOrEqual(5);
   });
 });
