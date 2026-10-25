@@ -16,3 +16,5 @@ export type AgentRef = Brand<string, "AgentRef">;
 export const ActId = (s: string) => s as ActId;
 export const AgentRef = (harness: string, thread: string, agent: string) =>
   `${harness}:${thread}:${agent}` as AgentRef;
+
+export const agentOf = (ref: AgentRef) => AgentId(ref.split(":").at(-1) ?? "");

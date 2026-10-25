@@ -1,19 +1,28 @@
 import { useWindowSize } from "@gpuix/react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { AgentRef } from "@/domain/ids.ts";
+import type { Task } from "@/domain/task.ts";
 import { Box, Column } from "@/ui/atoms/Box.tsx";
 import { MetricsContext, useTheme } from "@/ui/lib/context.ts";
 import { groups, order, step, stepAttention } from "@/ui/lib/fleet.ts";
 import { useNow } from "@/ui/lib/hooks/useNow.ts";
+import { useOpened } from "@/ui/lib/hooks/useOpened.ts";
 import { useStore } from "@/ui/lib/hooks/useStore.ts";
 import type { Keys, UiPorts } from "@/ui/lib/ports.ts";
 import { responsive } from "@/ui/lib/responsive.ts";
 import { AttentionStrip } from "@/ui/organisms/AttentionStrip.tsx";
+import { ChangesPanel } from "@/ui/organisms/ChangesPanel.tsx";
 import { ControlsBar } from "@/ui/organisms/ControlsBar.tsx";
+import { DetailPanel } from "@/ui/organisms/DetailPanel.tsx";
+import { FeedPanel } from "@/ui/organisms/FeedPanel.tsx";
 import { FleetTable } from "@/ui/organisms/FleetTable.tsx";
 import { TopBar } from "@/ui/organisms/TopBar.tsx";
 import { TreePanel } from "@/ui/organisms/TreePanel.tsx";
 import { PaneTemplate } from "@/ui/templates/PaneTemplate.tsx";
+
+const NO_RUN = { get: () => undefined, subscribe: () => () => {} };
+const NONE: readonly Task[] = [];
+const NO_TASKS = { get: () => NONE, subscribe: () => () => {} };
 
 const SPANS = [60, 120, 300, 600, 1800, 3600];
 
@@ -30,6 +39,8 @@ export const FloorPage = ({ ports, keys }: { ports: UiPorts; keys: Keys }) => {
   const total = size.width - r.pad * 2;
   const fleetWidth = r.compact ? total : Math.round(total * 0.66);
 
+  const half = r.compact ? total : Math.floor((total - r.pad) / 2);
+
   const gs = useMemo(() => groups(floor), [floor]);
   const agents = useMemo(() => order(gs), [gs]);
   // Selection is by identity, and goes when the agent does.
@@ -40,6 +51,12 @@ export const FloorPage = ({ ports, keys }: { ports: UiPorts; keys: Keys }) => {
       new Map(floor.attention.map((a) => [a.agent, `${a.reason}: ${a.label}`])),
     [floor.attention],
   );
+
+  const agent = agents.find((a) => a.ref === selected);
+  const opened = useOpened(ports, agent?.harness, agent?.thread);
+  const run = useStore(opened?.run ?? NO_RUN);
+  const tasks = useStore(opened?.tasks ?? NO_TASKS);
+  const setups = useStore(ports.setups);
 
   const latest = useRef({ floor, agents, selected });
   latest.current = { floor, agents, selected };
@@ -100,6 +117,24 @@ export const FloorPage = ({ ports, keys }: { ports: UiPorts; keys: Keys }) => {
               width={r.compact ? total : total - fleetWidth - r.pad}
               selected={selected}
             />
+          </Box>
+          <DetailPanel
+            agent={agent}
+            run={opened ? run : undefined}
+            tasks={tasks}
+            assets={agent ? (setups[agent.workspace] ?? []) : []}
+            now={now}
+            width={total}
+          />
+          <Box
+            style={{
+              flexDirection: r.compact ? "column" : "row",
+              alignItems: "flex-start",
+              gap: r.pad,
+            }}
+          >
+            <FeedPanel floor={floor} now={now} width={half} />
+            <ChangesPanel floor={floor} now={now} width={half} />
           </Box>
         </PaneTemplate>
       </Column>
