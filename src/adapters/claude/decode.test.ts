@@ -67,6 +67,16 @@ describe("makeDecoder", () => {
     });
   });
 
+  test("a synthetic placeholder message is not a turn", () => {
+    const line = assistant(1, "m1", [{ type: "text" }]);
+    const synthetic = {
+      ...line,
+      message: { ...line.message, model: "<synthetic>" },
+    };
+    const events = decodeAll(cfg, [synthetic]);
+    expect(events.some((e) => e._tag === "TurnReported")).toBe(false);
+  });
+
   test("thinking spans run from the previous event to the block", () => {
     const events = decodeAll(cfg, [
       result(2, "x"),
