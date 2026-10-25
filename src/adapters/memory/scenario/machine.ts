@@ -16,7 +16,7 @@ import {
   PRICING,
   SCRIPTS,
   SHOP,
-} from "@/app/scenario/stories.ts";
+} from "@/adapters/memory/scenario/stories.ts";
 import type { HarnessProfile } from "@/domain/profile.ts";
 import { within } from "@/domain/workspace.ts";
 import { harnessesOf } from "@/ports/Harness.ts";

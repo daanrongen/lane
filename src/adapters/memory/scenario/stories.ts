@@ -16,7 +16,7 @@ import {
   task,
   think,
   turn,
-} from "@/app/scenario/beats.ts";
+} from "@/adapters/memory/scenario/beats.ts";
 import { AgentId, AgentRef } from "@/domain/ids.ts";
 import { file, folder, host, mcp, type Ref } from "@/domain/ref.ts";
 

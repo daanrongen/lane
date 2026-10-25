@@ -1,16 +1,16 @@
 import { describe, expect, test } from "bun:test";
 import { Effect, Layer, Schedule, SubscriptionRef } from "effect";
 import { assetReaderMemory } from "@/adapters/memory/AssetReaderMemory.ts";
-import { ollamaProfile } from "@/adapters/ollama/profile.ts";
-import { Fleet, FleetLive } from "@/app/Fleet.ts";
-import { SessionsStoreLive } from "@/app/SessionsStore.ts";
-import { scenario } from "@/app/scenario/machine.ts";
+import { scenario } from "@/adapters/memory/scenario/machine.ts";
 import {
   aiderStories,
   claudeStories,
   codexStories,
   geminiStories,
-} from "@/app/scenario/stories.ts";
+} from "@/adapters/memory/scenario/stories.ts";
+import { ollamaProfile } from "@/adapters/ollama/profile.ts";
+import { Fleet, FleetLive } from "@/app/Fleet.ts";
+import { SessionsStoreLive } from "@/app/SessionsStore.ts";
 import { until } from "@/app/testing.ts";
 import { foldAll } from "@/domain/fold.ts";
 import { ThreadId } from "@/domain/ids.ts";
