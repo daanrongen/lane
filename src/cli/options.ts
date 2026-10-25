@@ -19,6 +19,15 @@ export const output = {
   ),
   json: on("json", "print json"),
   noHeader: on("no-header", "leave the header row out of a table"),
+  watch: Flag.Boolean("watch").pipe(
+    Flag.withAlias("f"),
+    Flag.withDescription("read again and redraw until interrupted"),
+    Flag.withDefault(false),
+  ),
+  every: Flag.String("every").pipe(
+    Flag.withDescription("seconds between reads with --watch (default 2)"),
+    Flag.optional,
+  ),
 };
 
 // Which agents a command looks at.
