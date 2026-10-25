@@ -24,7 +24,7 @@ type Listing = {
 };
 
 // A harness that fails to answer keeps its last known sessions; the others still show.
-const lister = () => {
+export const lister = () => {
   const last = new Map<string, readonly Thread[]>();
   return (listings: readonly Listing[]) =>
     Effect.forEach(
