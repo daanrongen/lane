@@ -2,7 +2,7 @@
 
 A native, GPU-rendered operations view of every AI agent running on your machine, whichever harness runs it.
 
-It follows Claude Code and Codex threads and the processes behind them (plus Ollama and the agents and Ollama asset homes) and shows them in one view. It follows the macOS light/dark appearance.
+It follows Claude Code and Codex threads and the processes behind them (plus the models a local Ollama server has loaded, and the agents and Ollama asset homes) and shows them in one view. It follows the macOS light/dark appearance.
 
 ## What it shows
 
@@ -62,7 +62,7 @@ Hexagonal, under `src/`:
 
 - `domain/`: pure models and folds (thread, run, act, ref, signal, link, plan, agent state, attention, insights, file tree, floor, timeline, context, mcp, models, network, skills, task)
 - `ports/`: Harness, RunSource, ThreadRepository, TaskRepository, Assets, ProcessProbe, Workspaces, Runtimes, SourceError
-- `adapters/`: claude, codex (reads SQLite for goals, queued prompts and spawned threads), agents, ollama, macOS appearance, process and git workspace detection, and in-memory fakes, including a scenario that plays many harnesses' work in real time
+- `adapters/`: claude, codex (reads SQLite for goals, queued prompts and spawned threads), agents, ollama (assets and the loaded-model runtime), macOS appearance, process and git workspace detection, and in-memory fakes, including a scenario that plays many harnesses' work in real time
 - `app/`: SessionsStore, Fleet (one floor of every live thread and process), Layers, the bridge to UI ports
 - `ui/`: atoms, molecules, organisms, pages, templates
 - `bin/`: entry points (start, demo, live, shot, binary, native)
