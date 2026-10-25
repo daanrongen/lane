@@ -4,22 +4,26 @@ import {
   answerAppearanceQuery,
   watchScheme,
 } from "@/adapters/macos/appearance.ts";
+import { notify } from "@/adapters/macos/notify.ts";
 import { makeUiPorts } from "@/app/bridge.ts";
 import type { Fleet } from "@/app/Fleet.ts";
 import type { SessionsStore } from "@/app/SessionsStore.ts";
+import { watchAlerts } from "@/app/watchAlerts.ts";
 import { answerCli, resolveMode } from "@/bin/cli.ts";
 import type { Assets } from "@/ports/Assets.ts";
 import type { Harnesses } from "@/ports/Harness.ts";
 import { App } from "@/ui/App.tsx";
 import { createKeys } from "@/ui/lib/keys.ts";
 
-// Entrypoints differ only in the layer they provide.
+// Entrypoints differ only in the layer they provide and whether they notify.
 export const start = async (
   layer: Layer.Layer<SessionsStore | Harnesses | Assets | Fleet, unknown>,
+  { alert = false } = {},
 ) => {
   answerCli();
   answerAppearanceQuery();
   const ports = await makeUiPorts(layer);
+  if (alert) watchAlerts(ports.floor, (a) => notify(a.title, a.body));
   const { keys, emit, typing } = createKeys();
   const scheme = await watchScheme();
 
