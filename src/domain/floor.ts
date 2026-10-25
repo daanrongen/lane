@@ -73,6 +73,7 @@ export interface AgentView {
   readonly usage: Usage;
   readonly limits: readonly Limit[];
   readonly progress: { readonly done: number; readonly total: number };
+  readonly next?: string;
   readonly modes: Readonly<Record<string, string>>;
   readonly acts: number;
   readonly failed: number;
@@ -253,6 +254,7 @@ export const floor = (
         usage: s.vitals.usage,
         limits: s.vitals.limits,
         progress: s.progress,
+        next: s.next,
         modes: s.vitals.modes,
         acts: s.acts,
         failed: s.failed,

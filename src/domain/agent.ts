@@ -2,7 +2,7 @@ import { type Act, isFailed, isOpen } from "@/domain/act.ts";
 import type { AgentId } from "@/domain/ids.ts";
 import type { Plan } from "@/domain/plan.ts";
 import type { Agent, Run } from "@/domain/run.ts";
-import type { Task } from "@/domain/task.ts";
+import type { Task, TaskSource } from "@/domain/task.ts";
 import { orderAgents } from "@/domain/timeline.ts";
 import { type Vitals, vitals } from "@/domain/vitals.ts";
 
@@ -45,6 +45,8 @@ export interface AgentSummary {
   readonly finished: boolean;
   readonly vitals: Vitals;
   readonly progress: { readonly done: number; readonly total: number };
+  // The title of what it picks up next.
+  readonly next?: string;
   readonly plan?: Plan;
   readonly loop: boolean;
   readonly retries: boolean;
@@ -98,6 +100,15 @@ const progressOf = (tasks: readonly Task[], id: AgentId) => {
   };
 };
 
+const SOURCES: readonly TaskSource[] = ["todo", "queue", "goal"];
+
+const nextOf = (tasks: readonly Task[], id: AgentId) =>
+  SOURCES.flatMap((s) =>
+    tasks.filter(
+      (t) => t.owner === id && t.source === s && t.status === "next",
+    ),
+  )[0]?.title;
+
 export const summarise = (
   run: Run,
   tasks: readonly Task[],
@@ -130,6 +141,7 @@ export const summarise = (
       finished: finishedAt !== undefined && finishedAt >= lastEvent,
       vitals: vitals(run, agent.id),
       progress: progressOf(tasks, agent.id),
+      next: nextOf(tasks, agent.id),
       plan: run.plans.findLast(
         (p) => p.agentId === agent.id && p.status === "proposed",
       ),

@@ -77,7 +77,10 @@ export const FleetRow = ({
   const quiet = agent.lastEventAt
     ? duration((now - agent.lastEventAt) / 1000)
     : "";
-  const what = agent.now?.label ?? note ?? agent.state;
+  const what =
+    agent.now?.label ??
+    note ??
+    (agent.next ? `next: ${agent.next}` : agent.state);
   return (
     <Row
       style={{

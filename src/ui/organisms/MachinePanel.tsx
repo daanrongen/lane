@@ -24,6 +24,7 @@ export const MachinePanel = ({
   const theme = useTheme();
   const names = new Map(floor.agents.map((a) => [a.ref, a.name]));
   const harnesses = [...new Set(floor.agents.map((a) => a.harness))].sort();
+  const upNext = floor.agents.filter((a) => a.next).slice(0, 4);
   const col = r.compact ? width : Math.floor((width - r.pad) / 2);
   return (
     <Row
@@ -56,6 +57,17 @@ export const MachinePanel = ({
             </Row>
           );
         })}
+        {upNext.length ? <Heading>UP NEXT</Heading> : null}
+        {upNext.map((a) => (
+          <Row key={a.ref} gap={r.dot} style={{ height: r.row }}>
+            <Text size="small" style={{ width: r.charWidth * 8 }}>
+              {a.name}
+            </Text>
+            <Text size="small" tone="dim" style={{ flexGrow: 1, minWidth: 0 }}>
+              {a.next ?? ""}
+            </Text>
+          </Row>
+        ))}
       </Column>
       <Column style={{ width: col }}>
         <Heading>WATCH</Heading>

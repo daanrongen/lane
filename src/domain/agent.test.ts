@@ -6,6 +6,7 @@ import { foldAll } from "@/domain/fold.ts";
 import { ActId, AgentId, SpanId, ThreadId } from "@/domain/ids.ts";
 import { insightsOf } from "@/domain/insight.ts";
 import { emptyRun } from "@/domain/run.ts";
+import { type Task, taskId } from "@/domain/task.ts";
 
 const main = AgentId("main");
 const sub = AgentId("sub");
@@ -220,5 +221,29 @@ describe("insights", () => {
     expect(insightsOf(summary([open("a", "Read", 1), close("a", 2)]))).toEqual(
       [],
     );
+  });
+});
+
+describe("next", () => {
+  const t = (source: Task["source"], title: string, status: Task["status"]) =>
+    ({
+      id: taskId(source, main, title),
+      title,
+      status,
+      source,
+      owner: main,
+      since: 0,
+    }) as Task;
+  const run = foldAll(emptyRun(ThreadId("t"), 0), [root]);
+
+  test("the todo list is picked up before the queue, and done work is skipped", () => {
+    const tasks = [
+      t("queue", "docs", "next"),
+      t("todo", "tests", "done"),
+      t("todo", "migrate", "next"),
+    ];
+    expect(summarise(run, tasks)[0]?.next).toBe("migrate");
+    expect(summarise(run, tasks.slice(0, 2))[0]?.next).toBe("docs");
+    expect(summarise(run, tasks.slice(1, 2))[0]?.next).toBeUndefined();
   });
 });
