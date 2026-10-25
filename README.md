@@ -1,4 +1,4 @@
-# agent-timeline
+# lane
 
 A native, GPU-rendered dashboard that shows what your AI coding agents are doing.
 
@@ -14,9 +14,27 @@ It watches local Claude Code and Codex sessions (plus agents and ollama asset ho
 - A Tasks board (Done / Doing / Next) of what agents did, are doing and have queued
 - A session sidebar grouped by directory (a switcher on narrow windows)
 
-## Quick start
+## Install
 
-Requires macOS and Bun.
+Requires Apple Silicon macOS.
+
+```sh
+brew install daanrongen/lane/lane
+lane
+```
+
+## Modes
+
+`lane` renders in the terminal when it speaks the kitty graphics protocol (Ghostty, kitty, WezTerm) and opens a native window otherwise. Override it with a flag or `LANE_MODE`.
+
+| Flag | Env | Result |
+| --- | --- | --- |
+| `--terminal` | `LANE_MODE=terminal` | render in this terminal |
+| `--window` | `LANE_MODE=window` | open a native window |
+
+## From source
+
+Requires Bun.
 
 ```sh
 bun install
@@ -52,7 +70,7 @@ Built with `@gpuix/react` and `@gpuix/native`, React 19, Bun, Effect 4, d3-scale
 | Command | Purpose |
 | --- | --- |
 | `bun run shot` | screenshot |
-| `bun run build` | compile a single binary to `dist/agent-timeline` |
+| `bun run build` | compile a single binary to `dist/lane` |
 | `bun test ./src` | tests |
 | `bun run typecheck` | type check |
 | `bun run check` | biome lint |

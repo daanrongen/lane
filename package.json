@@ -1,5 +1,7 @@
 {
-  "name": "agent-timeline",
+  "name": "lane",
+  "version": "0.1.0",
+  "license": "MIT",
   "private": true,
   "type": "module",
   "scripts": {
@@ -7,7 +9,7 @@
     "live": "bun src/bin/live.tsx",
     "shot": "bun src/bin/shot.tsx",
     "typecheck": "tsc --noEmit -p .",
-    "build": "bun build --compile src/bin/binary.ts --outfile dist/agent-timeline && rm -f .*.bun-build",
+    "build": "bun build --compile src/bin/binary.ts --outfile dist/lane && rm -f .*.bun-build",
     "format": "biome format --write src",
     "prepare": "lefthook install",
     "test": "bun test ./src",
