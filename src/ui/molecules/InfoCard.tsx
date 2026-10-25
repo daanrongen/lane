@@ -52,11 +52,11 @@ export const InfoCard = ({ card, accent }: { card: Card; accent: string }) => {
       }}
     >
       <Column gap={2}>
-        <Row gap={r.dot}>
+        <Row gap={r.dot} style={{ overflow: "hidden" }}>
           <Dot color={accent} />
-          <Text>{card.title}</Text>
+          <Text style={{ minWidth: 0 }}>{card.title}</Text>
         </Row>
-        <Text size="small" tone="dim">
+        <Text size="small" tone="dim" style={{ minWidth: 0 }}>
           {card.subtitle}
         </Text>
       </Column>
