@@ -12,7 +12,7 @@ import {
 } from "@/adapters/shared/touches.ts";
 import type { RunEvent } from "@/domain/events.ts";
 import type { AgentId } from "@/domain/ids.ts";
-import { SpanId } from "@/domain/ids.ts";
+import { ActId, SpanId } from "@/domain/ids.ts";
 import { mcpName } from "@/domain/mcp.ts";
 import { providerOf } from "@/domain/models.ts";
 import { targetsOfCommand } from "@/domain/network.ts";
@@ -55,6 +55,13 @@ const failedOutput = (output: unknown) => {
   return code !== undefined && Number(code) !== 0;
 };
 
+const window_ = (minutes: number) =>
+  minutes % 1440 === 0 && minutes >= 10080
+    ? "weekly"
+    : minutes % 60 === 0
+      ? `${minutes / 60}h`
+      : `${minutes}m`;
+
 // Unknown or malformed lines are ignored, never thrown on.
 export const makeCodexDecoder = (cfg: CodexConfig): Decoder => {
   const { agentId } = cfg;
@@ -66,6 +73,8 @@ export const makeCodexDecoder = (cfg: CodexConfig): Decoder => {
   let model: string | undefined;
   let provider: string | undefined;
   const modes = new Map<string, string>();
+  const limits = new Map<string, number>();
+  const awaiting = new Set<string>();
 
   const added = (at: number, source: Source, chars: number): RunEvent[] =>
     chars > 0
@@ -240,6 +249,7 @@ export const makeCodexDecoder = (cfg: CodexConfig): Decoder => {
       ["approval", str(p.approval_policy)],
       ["sandbox", str(rec(p.sandbox_policy)?.type)],
       ["effort", str(p.effort)],
+      ["collaboration", str(rec(p.collaboration_mode)?.mode)],
     ];
     return now.flatMap(([kind, value]) => {
       if (!value || modes.get(kind) === value) return [];
@@ -291,6 +301,45 @@ export const makeCodexDecoder = (cfg: CodexConfig): Decoder => {
     ];
   };
 
+  // Quota windows in the token count, each reported when its use changes.
+  const quota = (limit: Json | undefined, at: number): RunEvent[] => {
+    const minutes = num(limit?.window_minutes);
+    const used = num(limit?.used_percent) / 100;
+    if (!limit || !minutes || limits.get(window_(minutes)) === used) return [];
+    const name = window_(minutes);
+    limits.set(name, used);
+    const resets = num(limit.resets_at);
+    const after = num(limit.resets_in_seconds);
+    return [
+      {
+        _tag: "SignalReported",
+        reading: {
+          agentId,
+          at,
+          signal: {
+            _tag: "Limit",
+            window: name,
+            used,
+            resetsAt: resets
+              ? resets * 1000
+              : after
+                ? cfg.origin + (at + after) * 1000
+                : undefined,
+          },
+        },
+      },
+    ];
+  };
+
+  // A call waiting on a person, until it begins.
+  const approval = (p: Json, status: "awaiting" | "running"): RunEvent[] => {
+    const id = str(p.call_id);
+    if (!id || !calls.has(id)) return [];
+    if (status === "awaiting") awaiting.add(id);
+    else if (!awaiting.delete(id)) return [];
+    return [{ _tag: "ActUpdated", id: ActId(id), status }];
+  };
+
   const event = (p: Json, at: number): RunEvent[] => {
     switch (p.type) {
       case "task_started":
@@ -298,8 +347,19 @@ export const makeCodexDecoder = (cfg: CodexConfig): Decoder => {
         return [];
       case "token_count": {
         const info = rec(p.info);
-        return info ? usage(info) : [];
+        const limit = rec(p.rate_limits);
+        return [
+          ...(info ? usage(info) : []),
+          ...quota(rec(limit?.primary), at),
+          ...quota(rec(limit?.secondary), at),
+        ];
       }
+      case "exec_approval_request":
+      case "apply_patch_approval_request":
+        return approval(p, "awaiting");
+      case "exec_command_begin":
+      case "patch_apply_begin":
+        return approval(p, "running");
       case "task_complete":
       case "turn_aborted":
         return [{ _tag: "AgentFinished", agentId, at }];

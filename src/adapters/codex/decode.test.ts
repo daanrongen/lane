@@ -17,9 +17,12 @@ import { AgentId, ThreadId } from "@/domain/ids.ts";
 import { emptyRun } from "@/domain/run.ts";
 
 const main = AgentId("main");
-const decode = (lines: unknown[]) => {
+const decode = (lines: unknown[], live = false) => {
   const d = makeCodexDecoder({ origin, agentId: main });
-  const events: RunEvent[] = [...lines.flatMap((l) => d.push(l)), ...d.end()];
+  const events: RunEvent[] = [
+    ...lines.flatMap((l) => d.push(l)),
+    ...(live ? [] : d.end()),
+  ];
   return { events, run: foldAll(emptyRun(ThreadId("s"), origin), events) };
 };
 
@@ -161,5 +164,62 @@ describe("makeCodexDecoder", () => {
     ]);
     expect(run.skills[0]).toMatchObject({ name: "container", via: "mention" });
     expect(run.turns.at(-1)?.provider).toBe("ollama");
+  });
+
+  test("quota windows are limits, reported when their use changes", () => {
+    const count = (t: number, used: number) => ({
+      timestamp: `2026-01-01T00:00:0${t}Z`,
+      type: "event_msg",
+      payload: {
+        type: "token_count",
+        rate_limits: {
+          primary: { used_percent: used, window_minutes: 300, resets_at: 1000 },
+          secondary: { used_percent: 10, window_minutes: 10080 },
+        },
+      },
+    });
+    const { run } = decode([count(1, 40), count(2, 40), count(3, 91)]);
+    expect(
+      run.readings.map((r) => r.signal).filter((s) => s._tag === "Limit"),
+    ).toEqual([
+      { _tag: "Limit", window: "5h", used: 0.4, resetsAt: 1_000_000 },
+      { _tag: "Limit", window: "weekly", used: 0.1, resetsAt: undefined },
+      { _tag: "Limit", window: "5h", used: 0.91, resetsAt: 1_000_000 },
+    ]);
+  });
+
+  test("the collaboration mode is a mode", () => {
+    const { run } = decode([
+      {
+        timestamp: "2026-01-01T00:00:01Z",
+        type: "turn_context",
+        payload: { model: "gpt-5.5", collaboration_mode: { mode: "plan" } },
+      },
+    ]);
+    expect(run.modes.map((m) => [m.kind, m.value])).toContainEqual([
+      "collaboration",
+      "plan",
+    ]);
+  });
+
+  test("an approval request holds the call until it begins", () => {
+    const event = (t: number, type: string) => ({
+      timestamp: `2026-01-01T00:00:0${t}Z`,
+      type: "event_msg",
+      payload: { type, call_id: "c1" },
+    });
+    const status = (lines: unknown[]) =>
+      decode(lines, true).run.acts.find((a) => a.id === "c1")?.status;
+    const base = [started(0), call(1, "c1", "shell", { command: ["rm", "x"] })];
+    expect(status([...base, event(2, "exec_approval_request")])).toBe(
+      "awaiting",
+    );
+    expect(
+      status([
+        ...base,
+        event(2, "exec_approval_request"),
+        event(5, "exec_command_begin"),
+      ]),
+    ).toBe("running");
   });
 });

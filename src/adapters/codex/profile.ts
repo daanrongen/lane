@@ -13,6 +13,8 @@ export const codexProfile: HarnessProfile = {
     edits: "partial",
     mcp: "partial",
     skills: "partial",
+    approvals: "partial",
+    limits: "partial",
     sandbox: "partial",
     plan: "partial",
     tasks: "native",

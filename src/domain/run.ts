@@ -113,7 +113,12 @@ export interface SkillUse {
 export interface ModeChange {
   readonly agentId: AgentId;
   readonly at: number;
-  readonly kind: "permission" | "approval" | "sandbox" | "effort";
+  readonly kind:
+    | "permission"
+    | "approval"
+    | "sandbox"
+    | "effort"
+    | "collaboration";
   readonly value: string;
 }
 

@@ -5,7 +5,13 @@ import type { Usage } from "@/domain/run.ts";
 export type Signal =
   | {
       readonly _tag: "Mode";
-      readonly kind: "permission" | "approval" | "sandbox" | "plan" | "effort";
+      readonly kind:
+        | "permission"
+        | "approval"
+        | "sandbox"
+        | "plan"
+        | "effort"
+        | "collaboration";
       readonly value: string;
     }
   | {
