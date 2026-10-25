@@ -1,5 +1,6 @@
 import { Context, Effect, Layer, type Scope, type Stream } from "effect";
 import type { RunEvent } from "@/domain/events.ts";
+import type { HarnessProfile } from "@/domain/profile.ts";
 import type { Task } from "@/domain/task.ts";
 import type { HarnessId, Thread } from "@/domain/thread.ts";
 import { RunSource } from "@/ports/RunSource.ts";
@@ -10,6 +11,7 @@ import { ThreadRepository } from "@/ports/ThreadRepository.ts";
 // One agent harness: which sessions it has, what happened in each, and what is on its task lists.
 export interface Harness {
   readonly id: HarnessId;
+  readonly profile: HarnessProfile;
   readonly sessions: Effect.Effect<readonly Thread[], SourceError>;
   readonly events: (session: Thread) => Stream.Stream<RunEvent, SourceError>;
   readonly tasks: (
@@ -25,6 +27,7 @@ export class Harnesses extends Context.Service<Harnesses, readonly Harness[]>()(
 export const harness = <E, R>(
   id: HarnessId,
   adapters: Layer.Layer<ThreadRepository | RunSource | TaskRepository, E, R>,
+  profile: HarnessProfile = { id, name: id, facets: {} },
 ) =>
   Effect.gen(function* () {
     const context = yield* Layer.build(adapters);
@@ -33,6 +36,7 @@ export const harness = <E, R>(
     const tasks = Context.get(context, TaskRepository);
     return {
       id,
+      profile,
       sessions: sessions.list,
       events: (s) => runs.events(s.id),
       tasks: (s) => tasks.tasks(s),
