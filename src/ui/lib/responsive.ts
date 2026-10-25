@@ -28,7 +28,7 @@ const BASE = { width: 1100 };
 const clamp = (n: number, lo: number, hi: number) =>
   Math.min(hi, Math.max(lo, n));
 
-// Text never shrinks below its baseline; large panes scale it up, `zoom` adjusts by hand.
+// Layout scales with the pane width, text only with `zoom`.
 // Height never resizes a component: short windows scroll instead.
 export const responsive = (
   size: Size,
@@ -37,6 +37,7 @@ export const responsive = (
 ): Responsive => {
   const u = clamp(size.width / BASE.width, 1, 1.5) * zoom;
   const px = (n: number) => Math.round(n * u);
+  const text = (n: number) => Math.round(n * zoom);
 
   const compact = size.width < px(820);
   const sidebarShown = withSidebar && !compact;
@@ -60,7 +61,7 @@ export const responsive = (
     contextHeight: px(130),
     dot: px(8),
     tickEvery: px(90),
-    charWidth: px(11) * 0.6,
-    font: { title: px(17), body: px(13), small: px(11) },
+    charWidth: text(11) * 0.6,
+    font: { title: text(17), body: text(13), small: text(11) },
   };
 };

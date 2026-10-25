@@ -17,11 +17,11 @@ describe("responsive", () => {
     expect(narrow.plotWidth).toBeGreaterThan(wide.plotWidth - 200);
   });
 
-  test("text does not shrink in small panes but grows in large ones", () => {
+  test("text size does not depend on the pane width", () => {
     const small = responsive({ width: 500, height: 400 });
     const big = responsive({ width: 2200, height: 1400 });
-    expect(small.font.body).toBe(13);
-    expect(big.font.body).toBeGreaterThan(small.font.body);
+    expect(small.font).toEqual({ title: 17, body: 13, small: 11 });
+    expect(big.font).toEqual(small.font);
   });
 
   test("a short window never resizes components", () => {
