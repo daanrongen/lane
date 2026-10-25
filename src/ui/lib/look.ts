@@ -88,17 +88,30 @@ export const providerColor = (provider: string | undefined, theme: Theme) =>
     ollama: theme.text,
   })[provider ?? ""] ?? theme.dim;
 
-// How freely the agent may act: loud when it acts without asking.
+// How freely the agent may act: asks (dim), plans, edits, then acts alone (green) or bypasses (red).
 export const modeColor = (value: string, theme: Theme) =>
   ({
+    default: theme.dim,
+    untrusted: theme.dim,
     plan: theme.agents[1],
-    auto: theme.running,
     acceptEdits: theme.agents[0],
-    bypassPermissions: theme.failed,
+    "on-request": theme.agents[0],
+    "on-failure": theme.agents[3],
+    auto: theme.running,
+    dontAsk: theme.running,
     never: theme.running,
-    "on-failure": theme.agents[0],
-    untrusted: theme.agents[2],
+    bypassPermissions: theme.failed,
   })[value] ?? theme.dim;
+
+// One legend entry per colour, with a value that has it.
+export const MODE_KEY = [
+  ["asks", "default"],
+  ["plan", "plan"],
+  ["edits", "acceptEdits"],
+  ["on failure", "on-failure"],
+  ["auto", "auto"],
+  ["bypass", "bypassPermissions"],
+] as const;
 
 // Each state has its own glyph, so colour is never the only signal.
 export const stateLook = (state: AgentState, theme: Theme) =>

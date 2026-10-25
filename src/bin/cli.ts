@@ -1,3 +1,4 @@
+import { NAMES } from "@/cli/names.ts";
 import pkg from "../../package.json" with { type: "json" };
 
 export type Mode = "terminal" | "window";
@@ -5,11 +6,36 @@ export type Mode = "terminal" | "window";
 const HELP = `lane ${pkg.version}: a timeline of what your coding agents are doing
 
 usage: lane [--terminal | --window]
+       lane <command> [options]
 
   --terminal  render in this terminal (kitty graphics: Ghostty, kitty, WezTerm)
   --window    open a native window
   --version   print the version
   --help      print this help
+
+commands (read-only; a table in a terminal, JSON when piped):
+
+  status      the machine at a glance
+  threads     list and inspect threads
+  tasks       what agents are doing and have lined up next
+  agents      list and inspect agents
+  attention   who needs you
+  feed        what every agent did lately
+  acts        every act of a thread
+  files       files agents read or changed
+  tree        the part of a workspace's tree agents touched
+  usage       tokens and spend by model, harness, workspace or thread
+  plan        plans put to a person
+  context     what fills an agent's context window
+  assets      skills, MCP servers, models, rules, plugins, settings
+  mcp skills hosts models   what agents used
+  harnesses   what each harness can report
+  runtimes    models a local Ollama has loaded
+  doctor      which harness data is found and readable
+
+Run lane <command> --help for its options, --json or --format table|json|ndjson to choose the output,
+--watch to read again every few seconds,
+and lane --completions zsh|bash|fish for shell completions.
 
 With neither flag, LANE_MODE=terminal|window applies, else lane renders in
 the terminal if it speaks kitty graphics and opens a window if not.`;
@@ -29,6 +55,15 @@ export const resolveMode = (
     return env.LANE_MODE;
   return speaksKitty(env) ? "terminal" : "window";
 };
+
+export type Route = "cli" | "gui";
+
+// A known command word first means print and exit; anything else opens the app.
+export const route = (args: readonly string[]): Route =>
+  (NAMES as readonly string[]).includes(args[0] ?? "") ||
+  args[0] === "--completions"
+    ? "cli"
+    : "gui";
 
 export const answerCli = () => {
   const args = process.argv.slice(2);

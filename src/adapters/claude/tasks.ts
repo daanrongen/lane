@@ -7,13 +7,13 @@ import { tail } from "@/adapters/shared/tail.ts";
 import { taskLists } from "@/adapters/shared/taskLists.ts";
 import { statusOf } from "@/adapters/shared/taskStatus.ts";
 import { AgentId } from "@/domain/ids.ts";
-import type { Task } from "@/domain/task.ts";
+import type { Task, TaskStatus } from "@/domain/task.ts";
 import { SourceError } from "@/ports/SourceError.ts";
 import { TaskRepository } from "@/ports/TaskRepository.ts";
 
 const ROOT = AgentId("main");
 
-// The root agent's task lists: TodoWrite and the prompts waiting in the queue.
+// The root agent's task lists: TodoWrite, TaskCreate/TaskUpdate and the prompts waiting in the queue.
 export const makeTaskDecoder = (origin: number) => {
   const lists = taskLists(ROOT);
   // Prompts typed while the agent was busy; hand-backs from sub-agents are not shown.
@@ -35,6 +35,10 @@ export const makeTaskDecoder = (origin: number) => {
     return lists.set("queue", at, items);
   };
 
+  // Newer Claude Code numbers tasks 1, 2, ... in creation order.
+  const created: { title: string; status: TaskStatus; deleted?: boolean }[] =
+    [];
+
   const toolUse = (block: Json, at: number) => {
     const input = rec(block.input);
     if (block.name === "TodoWrite") {
@@ -44,7 +48,22 @@ export const makeTaskDecoder = (origin: number) => {
       });
       return lists.set("todo", at, items);
     }
-    return undefined;
+    if (block.name === "TaskCreate") {
+      const title = str(input?.subject);
+      if (!title) return undefined;
+      created.push({ title, status: "next" });
+    } else if (block.name === "TaskUpdate") {
+      const task = created[Number(str(input?.taskId)) - 1];
+      if (!task) return undefined;
+      task.title = str(input?.subject) ?? task.title;
+      if (input?.status === "deleted") task.deleted = true;
+      else if (input?.status) task.status = statusOf(input.status);
+    } else return undefined;
+    return lists.set(
+      "todo",
+      at,
+      created.filter((t) => !t.deleted),
+    );
   };
 
   // The whole list when this line changed it.

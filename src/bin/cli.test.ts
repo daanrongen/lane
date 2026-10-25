@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { resolveMode } from "@/bin/cli.ts";
+import { resolveMode, route } from "@/bin/cli.ts";
 
 describe("resolveMode", () => {
   test("renders in terminals that speak kitty graphics", () => {
@@ -27,5 +27,15 @@ describe("resolveMode", () => {
 
   test("ignores an unknown LANE_MODE", () => {
     expect(resolveMode([], { LANE_MODE: "nope" })).toBe("window");
+  });
+});
+
+describe("route", () => {
+  test("a command word runs headless, everything else opens the app", () => {
+    expect(route(["threads", "ls"])).toBe("cli");
+    expect(route(["status"])).toBe("cli");
+    expect(route([])).toBe("gui");
+    expect(route(["--terminal"])).toBe("gui");
+    expect(route(["--window"])).toBe("gui");
   });
 });

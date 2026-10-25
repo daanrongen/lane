@@ -179,6 +179,7 @@ export const makeDecoder = (cfg: DecoderConfig): Decoder => {
   const { agentId } = cfg;
   const turns = new Set<string>();
   const ended = new Set<string>();
+  const handbacks = new Set<string>();
   const spans = new Map<string, boolean>(); // tool_use id -> closed
   const sources = new Map<string, Pick<Entry, "kind" | "label">>();
   const plans = new Set<string>();
@@ -470,9 +471,11 @@ export const makeDecoder = (cfg: DecoderConfig): Decoder => {
       if (block?.type === "tool_use") events.push(...toolUse(block, at));
     }
     // A final answer or a handback: sub-agents are done, the root is idle until the next prompt.
-    const handback = arr(msg.content).some(
+    const calls = arr(msg.content).filter(
       (b) => rec(b)?.name === "SubagentHandback",
     );
+    for (const c of calls) handbacks.add(str(rec(c)?.id) ?? "");
+    const handback = calls.length > 0;
     if (id && (msg.stop_reason === "end_turn" || handback) && !ended.has(id)) {
       ended.add(id);
       events.push({ _tag: "AgentFinished", agentId, at });
@@ -512,6 +515,10 @@ export const makeDecoder = (cfg: DecoderConfig): Decoder => {
       spans.set(id, true);
       const source = sources.get(id);
       return [
+        // The handback's own result is the agent's last event, so it finishes then.
+        ...(handbacks.has(id)
+          ? [{ _tag: "AgentFinished", agentId, at } as const]
+          : []),
         ...(source ? added(at, source, sizeOf(block.content)) : []),
         ...added(
           at,

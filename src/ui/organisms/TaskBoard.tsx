@@ -31,7 +31,7 @@ const Lane = ({
   const r = useMetrics();
   const theme = useTheme();
   return (
-    <Column gap={3} style={{ width }}>
+    <Column gap={Math.round(r.dot / 2)} style={{ width }}>
       <Row gap={r.dot}>
         <Text size="small">{title}</Text>
         <Text size="small" tone="dim">
@@ -68,7 +68,7 @@ export const TaskBoard = ({
   const laneWidth = Math.floor((width - gap * 2) / 3);
   const total = board.done.length + board.doing.length + board.next.length;
   return (
-    <Column gap={Math.round(r.pad / 2)} style={{ width }}>
+    <Column gap={Math.round(r.dot / 2)} style={{ width }}>
       <Row justify="space-between">
         <Text>Tasks</Text>
         <Text tone="dim">

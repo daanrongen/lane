@@ -4,6 +4,8 @@ A native, GPU-rendered operations view of every AI agent running on your machine
 
 It follows Claude Code and Codex threads and the processes behind them (plus the models a local Ollama server has loaded, and the agents and Ollama asset homes) and shows them in one view. It follows the macOS light/dark appearance.
 
+Besides the app, `lane` has read-only [commands](#commands) for scripts and quick checks, such as `lane threads ls` and `lane tasks ls`.
+
 ## What it shows
 
 One view with no sub-pages: a fixed top bar, a scrolling main and a fixed controls bar.
@@ -38,6 +40,58 @@ lane
 | `--terminal` | `LANE_MODE=terminal` | render in this terminal |
 | `--window` | `LANE_MODE=window` | open a native window |
 
+## Commands
+
+Read-only queries that print and exit, without opening the app. Output is a table in a terminal and JSON when piped; `--json` or `--format table|json|ndjson` choose it.
+
+| Command | Shows |
+| --- | --- |
+| `lane status` | agents by state, who needs you, tokens and spend (`--line` for a prompt) |
+| `lane threads ls` / `show <thread>` | threads of every harness, newest first; one thread's workspace, usage, models and agents |
+| `lane tasks ls [thread]` / `next` | what each agent is doing and has lined up next |
+| `lane agents ls` / `show <agent>` | every agent with state, model, context fill, cost and what it is doing now |
+| `lane attention` | who needs you, is stalled or failed (`--exit-code` exits 1 when anyone does) |
+| `lane feed` | what every agent did lately (`--kind`, `--agent`, `--text`, `--touching <file, host, ...>`) |
+| `lane acts [thread]` | every act of a thread with status, failure and what it touched (`--kind`, `--failed`, `--awaiting`) |
+| `lane files` / `tree [dir]` | files agents read or changed, and a workspace's touched tree (`--edited`, `--shared`) |
+| `lane usage` | tokens and spend by `--by model\|harness\|workspace\|thread`; `n/a` where a harness cannot report cost |
+| `lane plan [thread]` / `context [thread]` | plans put to a person; what fills an agent's context window |
+| `lane assets` | skills, MCP servers, models, rules, plugins and settings (`--kind`, `-w`) |
+| `lane mcp` / `skills` / `hosts` / `models` | what agents used, per thread or across the live ones, against the catalog |
+| `lane harnesses` / `runtimes` | what each harness can report (native, partial or n/a); the models Ollama has loaded |
+| `lane doctor` | which harness data is found and readable; exits 1 if a harness cannot be listed |
+
+A `<thread>` is an id, `harness:id`, an id prefix, a directory or part of a name. An `<agent>` is a full or partial `harness:thread:agent` ref, or a name.
+
+Options shared by the listing commands:
+
+| Flag | Meaning |
+| --- | --- |
+| `--harness <id>` | only `claude`, `codex`, ... |
+| `-w`, `--workspace <path>` | only this directory and below |
+| `-n`, `--limit <rows>` | most rows (`threads ls` shows 30 by default) |
+| `--all` | every thread, not just live and recent ones |
+| `--no-probe` | do not look at running processes |
+| `--no-header` | leave the header row out of a table |
+| `-f`, `--watch` | read again and redraw every 2 seconds until interrupted (`--every <seconds>`); appends one result per read when piped |
+
+Each command adds its own filters: `threads ls` takes `--live`, `--past`, `--status` and `--since 2h`; `tasks ls` takes `--status doing|next|done|any`, `--source` and `--owner`; `agents ls` takes `--state`. Run `lane <command> --help` for the full list.
+
+```sh
+lane status --line                          # 1 working · 2 done · 108k out · $4.12
+lane threads ls --live -w .                 # live threads in this directory
+lane tasks ls .                             # doing and next, for the newest thread here
+lane agents ls --state stalled --json | jq  # machine-readable
+lane attention --exit-code || notify-send   # exit 1 when anyone needs you
+lane feed --touching package.json -f        # follow what touches a file
+```
+
+Tasks list what an agent is doing now and what is lined up next, including work handed to sub-agents. Without a thread, `tasks ls` covers every live and recent one; done tasks appear with `--status done` or `any`.
+
+JSON carries raw values (epoch milliseconds, numbers, enums) under snake_case keys, never display strings like `3m`. Data goes to stdout and errors to stderr. Exit codes: `0` ok, `1` error, `2` bad usage, `3` no match or an ambiguous one.
+
+Shell completions: `lane --completions zsh` (also `bash` and `fish`).
+
 ## From source
 
 Requires Bun.
@@ -46,6 +100,7 @@ Requires Bun.
 bun install
 bun run demo   # a looping scenario across several harnesses
 bun run live   # real local threads and processes
+bun run cli threads ls
 ```
 
 ## Keys
@@ -72,7 +127,8 @@ Hexagonal, under `src/`:
 - `adapters/`: claude, codex (reads SQLite for goals, queued prompts and spawned threads), agents, ollama (assets and the loaded-model runtime), macOS appearance and notifications, process and git workspace detection, and in-memory fakes, including a scenario that plays many harnesses' work in real time
 - `app/`: SessionsStore, Fleet (one floor of every live thread and process), Layers, the bridge to UI ports
 - `ui/`: atoms, molecules, organisms, pages, templates
-- `bin/`: entry points (start, demo, live, shot, binary, native)
+- `cli/`: the headless commands, built on `effect/cli`, reading one snapshot through `app/Snapshot`
+- `bin/`: entry points (main routes to `cli/` or the app; start, demo, live, shot, native)
 
 Built with `@gpuix/react` and `@gpuix/native`, React 19, Bun, Effect 4, d3-scale and d3-hierarchy.
 

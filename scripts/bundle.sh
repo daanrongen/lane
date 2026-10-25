@@ -18,4 +18,5 @@ tar -C build/bundle -czf "dist/$name.tar.gz" "$name"
 check="build/bundle/check"
 mkdir -p "$check" && tar -C "$check" -xzf "dist/$name.tar.gz"
 env -i HOME="$HOME" PATH=/usr/bin:/bin "$check/$name/bin/lane" --version | grep -qx "$version"
+env -i HOME="$check" PATH=/usr/bin:/bin "$check/$name/bin/lane" threads ls --json | grep -qx '\[\]'
 echo "dist/$name.tar.gz"

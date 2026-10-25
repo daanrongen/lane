@@ -5,11 +5,12 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "cli": "bun src/bin/main.ts",
     "demo": "bun src/bin/demo.tsx",
     "live": "bun src/bin/live.tsx",
     "shot": "bun src/bin/shot.tsx",
     "typecheck": "tsc --noEmit -p .",
-    "build": "bun build --compile src/bin/binary.ts --outfile dist/lane && rm -f .*.bun-build",
+    "build": "bun build --compile src/bin/main.ts --outfile dist/lane && rm -f .*.bun-build",
     "format": "biome format --write src",
     "prepare": "lefthook install",
     "test": "bun test ./src",

@@ -1,9 +1,17 @@
 import { Effect, Schedule, Stream, SubscriptionRef } from "effect";
 import type { Asset } from "@/domain/assets.ts";
-import { Assets } from "@/ports/Assets.ts";
+import { type AssetReader, Assets } from "@/ports/Assets.ts";
 
 // Setup changes rarely, so the default refresh is slow.
 const REFRESH = Schedule.spaced("10 seconds");
+
+// Everything every reader finds for the project at `cwd`; a reader that fails adds nothing.
+export const readAssets = (readers: readonly AssetReader[], cwd: string) =>
+  Effect.forEach(
+    readers,
+    (r) => r.read(cwd).pipe(Effect.orElseSucceed((): readonly Asset[] => [])),
+    { concurrency: "unbounded" },
+  ).pipe(Effect.map((all) => all.flat()));
 
 // Everything every reader finds for the project at `cwd`, refreshed until the scope closes.
 export const openAssets = (
@@ -13,11 +21,7 @@ export const openAssets = (
   Effect.gen(function* () {
     const readers = yield* Assets;
     const assets = yield* SubscriptionRef.make<readonly Asset[]>([]);
-    const readAll = Effect.forEach(
-      readers,
-      (r) => r.read(cwd).pipe(Effect.orElseSucceed((): readonly Asset[] => [])),
-      { concurrency: "unbounded" },
-    ).pipe(Effect.map((all) => all.flat()));
+    const readAll = readAssets(readers, cwd);
     // Read once straight away, then on the refresh schedule.
     yield* Stream.make(undefined).pipe(
       Stream.concat(Stream.fromSchedule(refresh)),

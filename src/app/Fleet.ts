@@ -10,10 +10,12 @@ import {
   Stream,
   SubscriptionRef,
 } from "effect";
+import { assemble } from "@/app/assemble.ts";
+import { readAssets } from "@/app/openAssets.ts";
 import { type OpenRun, openRun } from "@/app/openRun.ts";
 import { SessionsStore } from "@/app/SessionsStore.ts";
 import type { Asset } from "@/domain/assets.ts";
-import { type Entry, type Floor, floor, type Proc } from "@/domain/floor.ts";
+import { type Floor, floor } from "@/domain/floor.ts";
 import { find, MATCHERS, presence } from "@/domain/presence.ts";
 import type { HarnessProfile } from "@/domain/profile.ts";
 import type { Thread } from "@/domain/thread.ts";
@@ -36,7 +38,7 @@ export interface FleetOptions {
   readonly profiles: readonly HarnessProfile[];
 }
 
-const DEFAULTS: FleetOptions = {
+export const DEFAULTS: FleetOptions = {
   tick: Schedule.spaced("500 millis"),
   recent: 900_000,
   cap: 24,
@@ -151,36 +153,24 @@ export const FleetLive = (options: Partial<FleetOptions> = {}) => {
         const tracked = pick(merged.threads, at, opts);
         yield* follow(tracked);
 
-        const entries: Entry[] = [];
+        const loaded = [];
         for (const thread of tracked) {
           const opened = pool.get(keyOf(thread))?.opened;
           if (!opened) continue;
-          const run = yield* SubscriptionRef.get(opened.run);
-          // Nothing is known until the first events are read.
-          if (run.startedAt === 0) continue;
-          entries.push({
+          loaded.push({
             thread,
-            run,
+            run: yield* SubscriptionRef.get(opened.run),
             tasks: yield* SubscriptionRef.get(opened.tasks),
-            workspace: yield* spaces.of(thread.cwd),
           });
         }
-        const alone = yield* Effect.forEach(merged.orphans, (p) =>
-          spaces.of(p.cwd ?? "/").pipe(
-            Effect.map(
-              (workspace): Proc => ({
-                harness: p.harness,
-                pid: p.pid,
-                command: p.command,
-                startedAt: p.startedAt,
-                workspace,
-              }),
-            ),
-          ),
-        );
-
         const next = {
-          ...floor(at, entries, alone, yield* machine.list),
+          ...(yield* assemble(
+            spaces.of,
+            machine.list,
+            at,
+            loaded,
+            merged.orphans,
+          )),
           unreadable: yield* SubscriptionRef.get(unreadable),
         };
         const prev = yield* SubscriptionRef.get(board);
@@ -202,14 +192,9 @@ export const FleetLive = (options: Partial<FleetOptions> = {}) => {
         const read = yield* Effect.forEach(
           roots,
           (root) =>
-            Effect.forEach(
-              readers,
-              (r) =>
-                r
-                  .read(root)
-                  .pipe(Effect.orElseSucceed((): readonly Asset[] => [])),
-              { concurrency: "unbounded" },
-            ).pipe(Effect.map((all) => [root, all.flat()] as const)),
+            readAssets(readers, root).pipe(
+              Effect.map((all) => [root, all] as const),
+            ),
           { concurrency: 4 },
         );
         const next = Object.fromEntries(read);

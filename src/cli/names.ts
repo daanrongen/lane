@@ -1,0 +1,23 @@
+// Kept apart from the commands so the router can know them without loading anything.
+export const NAMES = [
+  "status",
+  "threads",
+  "tasks",
+  "agents",
+  "attention",
+  "feed",
+  "acts",
+  "files",
+  "tree",
+  "usage",
+  "plan",
+  "context",
+  "assets",
+  "mcp",
+  "skills",
+  "hosts",
+  "models",
+  "harnesses",
+  "runtimes",
+  "doctor",
+] as const;
