@@ -260,7 +260,9 @@ export const FloorPage = ({ ports, keys }: { ports: UiPorts; keys: Keys }) => {
               span={span}
               width={fleetWidth}
               selected={selected}
-              onSelect={setPicked}
+              onSelect={(ref) =>
+                setPicked((p) => (p === ref ? undefined : ref))
+              }
               notes={notes}
             />
             <TreePanel

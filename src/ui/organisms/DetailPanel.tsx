@@ -128,26 +128,14 @@ const Now = ({
 // Steps and tasks shown before the rest are counted.
 const PLAN_ROWS = 5;
 
-// What is underway comes first, so a long list ends with what is done.
-const ORDER = { doing: 0, next: 1, done: 2 } as const;
-
 const GLYPH = { done: "✓", doing: "●", next: "○" } as const;
 
-const Plan = ({
-  run,
-  agent,
-  tasks,
-}: {
-  run: Run;
-  agent: AgentView;
-  tasks: readonly Task[];
-}) => {
+// A list's own order is the order of work: the todo list, then the queue, then goals.
+const WORK = ["todo", "agent", "queue", "goal"] as const;
+
+const Plan = ({ run, agent }: { run: Run; agent: AgentView }) => {
   const r = useMetrics();
-  const id = agentOf(agent.ref);
-  const plan = run.plans.findLast((p) => p.agentId === id);
-  const own = tasks
-    .filter((t) => t.owner === id)
-    .sort((a, b) => ORDER[a.status] - ORDER[b.status]);
+  const plan = run.plans.findLast((p) => p.agentId === agentOf(agent.ref));
   return (
     <Column gap={Math.round(r.dot / 2)}>
       <Heading>PLAN</Heading>
@@ -165,24 +153,53 @@ const Plan = ({
             </Text>
           ) : null}
         </>
-      ) : null}
-      {own.slice(0, PLAN_ROWS).map((t) => (
+      ) : (
+        <Text size="small" tone="dim">
+          no plan
+        </Text>
+      )}
+    </Column>
+  );
+};
+
+// What is under way now, then what comes next in the order it will be picked up.
+const Tasks = ({
+  agent,
+  tasks,
+}: {
+  agent: AgentView;
+  tasks: readonly Task[];
+}) => {
+  const r = useMetrics();
+  const own = tasks.filter(
+    (t) => t.owner === agentOf(agent.ref) && t.source !== "now",
+  );
+  const rank = (t: Task) => WORK.indexOf(t.source as (typeof WORK)[number]);
+  const coming = [
+    ...own.filter((t) => t.status === "doing"),
+    ...own.filter((t) => t.status === "next").sort((a, b) => rank(a) - rank(b)),
+  ];
+  const done = own.filter((t) => t.status === "done").length;
+  return (
+    <Column gap={Math.round(r.dot / 2)}>
+      <Heading>{done ? `TASKS · ${done} done` : "TASKS"}</Heading>
+      {coming.slice(0, PLAN_ROWS).map((t) => (
         <Text
           key={t.id}
           size="small"
-          tone={t.status === "done" ? "dim" : "text"}
+          tone={t.status === "doing" ? "text" : "dim"}
         >
           {`${GLYPH[t.status]} ${clip(t.title, 60)}`}
         </Text>
       ))}
-      {own.length > PLAN_ROWS ? (
+      {coming.length > PLAN_ROWS ? (
         <Text size="small" tone="dim">
-          {`+${own.length - PLAN_ROWS} more tasks`}
+          {`+${coming.length - PLAN_ROWS} more tasks`}
         </Text>
       ) : null}
-      {!plan && own.length === 0 ? (
+      {coming.length === 0 ? (
         <Text size="small" tone="dim">
-          nothing reported
+          {done ? "all done" : "nothing reported"}
         </Text>
       ) : null}
     </Column>
@@ -247,6 +264,9 @@ export const DetailPanel = ({
         <Text size="small" tone="dim">
           {agent.state}
         </Text>
+        <Text size="small" tone="dim">
+          · esc or click the row to close
+        </Text>
       </Row>
       <Row
         gap={r.pad}
@@ -270,8 +290,9 @@ export const DetailPanel = ({
             </>
           )}
         </Column>
-        <Column style={{ width: col }}>
-          <Plan run={run} agent={agent} tasks={tasks} />
+        <Column gap={r.dot} style={{ width: col }}>
+          <Plan run={run} agent={agent} />
+          <Tasks agent={agent} tasks={tasks} />
         </Column>
         <Column gap={r.dot} style={{ width: col }}>
           <Heading>SETUP</Heading>

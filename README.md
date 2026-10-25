@@ -59,7 +59,7 @@ bun run live   # real local threads and processes
 | `h` | history: earlier runs of the selected agent's workspace, or of all; `enter` replays one |
 | `r` | replay the selected agent from its start (`space` pause, `1` `2` `3` for 1x, 2x, 10x, `←→` seek, `0` restart, `esc` back) |
 | `+` / `-` | zoom the time lanes |
-| `esc` | clear the selection |
+| `esc` | clear the feed filter, then the selection (clicking the selected row does too) |
 | `?` | help |
 | `q` | quit |
 
