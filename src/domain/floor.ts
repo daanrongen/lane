@@ -1,4 +1,4 @@
-import type { ActKind } from "@/domain/act.ts";
+import { type ActKind, type ActStatus, isFailed } from "@/domain/act.ts";
 import {
   type AgentState,
   type AgentSummary,
@@ -6,7 +6,7 @@ import {
   summarise,
 } from "@/domain/agent.ts";
 import { type Attention, attentionOf } from "@/domain/attention.ts";
-import { AgentRef, type ThreadId } from "@/domain/ids.ts";
+import { type AgentId, AgentRef, type ThreadId } from "@/domain/ids.ts";
 import {
   collisions,
   type Edited,
@@ -74,6 +74,30 @@ export interface AgentView {
   readonly acts: number;
   readonly failed: number;
   readonly insights: readonly InsightKind[];
+  // The latest acts, for the time lane.
+  readonly lane: readonly LaneBar[];
+  // Epoch ms when a sub-agent was handed its work.
+  readonly born?: number;
+}
+
+// One stretch of an agent's time; an open one has no end.
+export interface LaneBar {
+  // Epoch ms.
+  readonly start: number;
+  readonly end?: number;
+  readonly kind: ActKind;
+  readonly failed: boolean;
+  readonly awaiting: boolean;
+}
+
+// One thing an agent did, for the cross-agent log.
+export interface FeedItem {
+  // Epoch ms.
+  readonly at: number;
+  readonly agent: AgentRef;
+  readonly kind: ActKind;
+  readonly label: string;
+  readonly status: ActStatus;
 }
 
 export interface AttentionItem extends Attention {
@@ -96,6 +120,8 @@ export interface Floor {
   readonly agents: readonly AgentView[];
   readonly workspaces: readonly WorkspaceView[];
   readonly attention: readonly AttentionItem[];
+  // The latest acts of every agent, newest first.
+  readonly feed: readonly FeedItem[];
   readonly insights: readonly Insight[];
   readonly runtimes: readonly RuntimeView[];
   readonly totals: {
@@ -127,6 +153,13 @@ const summarised = (run: Run, tasks: readonly Task[]) => {
   return out;
 };
 
+const handedAt = (run: Run, id: AgentId, epoch: (t: number) => number) => {
+  const h = run.handoffs.find((x) => x.to === id);
+  return h && epoch(h.at);
+};
+
+const FEED = 100;
+
 const nowOf = (s: AgentSummary, epoch: (t: number) => number) => {
   const act = s.open.findLast((a) => a.kind !== "spawn") ?? s.open.at(-1);
   return act
@@ -143,6 +176,7 @@ export const floor = (
 ): Floor => {
   const views: AgentView[] = [];
   const attention: AttentionItem[] = [];
+  const feed: FeedItem[] = [];
   const edits: Edited[] = [];
   const touched = new Map<string, Touch[]>();
   const spaces = new Map<string, Workspace>();
@@ -182,6 +216,16 @@ export const floor = (
           });
         }
       }
+      for (const a of s.recent) {
+        if (a.kind === "think") continue;
+        feed.push({
+          at: epoch(a.start),
+          agent: ref,
+          kind: a.kind,
+          label: a.label,
+          status: a.status,
+        });
+      }
       views.push({
         ref,
         harness: thread.harness,
@@ -205,6 +249,16 @@ export const floor = (
         acts: s.acts,
         failed: s.failed,
         insights: insightsOf(s),
+        lane: s.recent.map(
+          (a): LaneBar => ({
+            start: epoch(a.start),
+            end: a.end === undefined ? undefined : epoch(a.end),
+            kind: a.kind,
+            failed: isFailed(a),
+            awaiting: a.status === "awaiting",
+          }),
+        ),
+        born: handedAt(run, s.agent.id, epoch),
       });
     }
   }
@@ -227,6 +281,7 @@ export const floor = (
       acts: 0,
       failed: 0,
       insights: [],
+      lane: [],
     });
   }
 
@@ -262,6 +317,7 @@ export const floor = (
     agents,
     workspaces,
     attention,
+    feed: feed.sort((a, b) => b.at - a.at).slice(0, FEED),
     insights: [
       ...found,
       ...agents.flatMap((a) =>

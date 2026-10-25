@@ -40,6 +40,7 @@ export interface AgentSummary {
   readonly failed: number;
   readonly open: readonly Act[];
   readonly last?: Act;
+  readonly recent: readonly Act[];
   readonly lastEvent: number;
   readonly finished: boolean;
   readonly vitals: Vitals;
@@ -51,6 +52,7 @@ export interface AgentSummary {
 }
 
 const MAX_FILES = 200;
+const RECENT = 60;
 const REAL = (a: Act) => a.kind !== "think" && a.kind !== "compact";
 
 // The same call over and over.
@@ -120,6 +122,7 @@ export const summarise = (
       failed: acts.filter(isFailed).length,
       open: acts.filter(isOpen),
       last,
+      recent: acts.slice(-RECENT),
       lastEvent,
       finished: finishedAt !== undefined && finishedAt >= lastEvent,
       vitals: vitals(run, agent.id),

@@ -238,3 +238,22 @@ describe("vitals", () => {
     expect(vitals(emptyRun(ThreadId("t"), 0), main).fill).toBeUndefined();
   });
 });
+
+describe("lane and feed", () => {
+  const run = entry("claude", "lane", "/w/lane", [
+    ...edit("e1", "src/a.ts", 5),
+    ...edit("e2", "src/b.ts", 9),
+  ]);
+  const f = floor(at, [run]);
+
+  test("an agent's recent acts become bars on the wall clock", () => {
+    expect(f.agents[0]?.lane.map((b) => [b.start, b.end])).toEqual([
+      [START + 5_000, START + 6_000],
+      [START + 9_000, START + 10_000],
+    ]);
+  });
+
+  test("the feed lists acts of every agent, newest first", () => {
+    expect(f.feed.map((i) => i.label)).toEqual(["src/b.ts", "src/a.ts"]);
+  });
+});
