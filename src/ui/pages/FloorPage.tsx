@@ -8,7 +8,8 @@ import { groups, order, step, stepAttention } from "@/ui/lib/fleet.ts";
 import { useNow } from "@/ui/lib/hooks/useNow.ts";
 import { useOpened } from "@/ui/lib/hooks/useOpened.ts";
 import { useStore } from "@/ui/lib/hooks/useStore.ts";
-import { search } from "@/ui/lib/palette.ts";
+import { type Lens, lensed } from "@/ui/lib/lens.ts";
+import { find } from "@/ui/lib/palette.ts";
 import type { Keys, UiPorts } from "@/ui/lib/ports.ts";
 import { responsive } from "@/ui/lib/responsive.ts";
 import { AttentionStrip } from "@/ui/organisms/AttentionStrip.tsx";
@@ -37,6 +38,7 @@ export const FloorPage = ({ ports, keys }: { ports: UiPorts; keys: Keys }) => {
   const [picked, setPicked] = useState<AgentRef>();
   const [span, setSpan] = useState(300);
   const [help, setHelp] = useState(false);
+  const [lens, setLens] = useState<Lens>();
   const [finding, setFinding] = useState<{ query: string; index: number }>();
   const r = responsive(size);
   const theme = useTheme();
@@ -58,22 +60,31 @@ export const FloorPage = ({ ports, keys }: { ports: UiPorts; keys: Keys }) => {
   );
 
   const agent = agents.find((a) => a.ref === selected);
+  const items = useMemo(() => lensed(floor, lens), [floor, lens]);
   const opened = useOpened(ports, agent?.harness, agent?.thread);
   const run = useStore(opened?.run ?? NO_RUN);
   const tasks = useStore(opened?.tasks ?? NO_TASKS);
   const setups = useStore(ports.setups);
 
   const found = useMemo(
-    () => (finding ? search(agents, finding.query) : []),
-    [agents, finding],
+    () => (finding ? find(floor, agents, finding.query) : []),
+    [floor, agents, finding],
   );
-  const latest = useRef({ floor, agents, selected, finding, found, help });
-  latest.current = { floor, agents, selected, finding, found, help };
+  const latest = useRef({
+    floor,
+    agents,
+    selected,
+    finding,
+    found,
+    help,
+    lens,
+  });
+  latest.current = { floor, agents, selected, finding, found, help, lens };
   useEffect(() => keys.typing(finding !== undefined), [keys, finding]);
   useEffect(
     () =>
       keys.subscribe((key) => {
-        const { floor, agents, selected, finding, found, help } =
+        const { floor, agents, selected, finding, found, help, lens } =
           latest.current;
         if (finding) {
           const move = (by: number) =>
@@ -101,7 +112,10 @@ export const FloorPage = ({ ports, keys }: { ports: UiPorts; keys: Keys }) => {
         if (key === "up") go(step(agents, selected, -1));
         if (key === "n") go(stepAttention(floor, agents, selected, 1));
         if (key === "N") go(stepAttention(floor, agents, selected, -1));
-        if (key === "escape") setPicked(undefined);
+        if (key === "escape") {
+          if (lens) setLens(undefined);
+          else setPicked(undefined);
+        }
         if (key === "+" || key === "=")
           setSpan((s) => SPANS[Math.max(0, SPANS.indexOf(s) - 1)] ?? s);
         if (key === "-")
@@ -148,6 +162,7 @@ export const FloorPage = ({ ports, keys }: { ports: UiPorts; keys: Keys }) => {
               now={now}
               width={r.compact ? total : total - fleetWidth - r.pad}
               selected={selected}
+              onPick={(ref) => setLens({ ref })}
             />
           </Box>
           <DetailPanel
@@ -165,7 +180,14 @@ export const FloorPage = ({ ports, keys }: { ports: UiPorts; keys: Keys }) => {
               gap: r.pad,
             }}
           >
-            <FeedPanel floor={floor} now={now} width={half} />
+            <FeedPanel
+              floor={floor}
+              items={items}
+              lens={lens}
+              now={now}
+              width={half}
+              onClear={() => setLens(undefined)}
+            />
             <ChangesPanel floor={floor} now={now} width={half} />
           </Box>
         </PaneTemplate>
@@ -181,7 +203,9 @@ export const FloorPage = ({ ports, keys }: { ports: UiPorts; keys: Keys }) => {
             onQuery={(query) => setFinding({ query, index: 0 })}
             onSubmit={() => {
               const hit = found[finding.index];
-              if (hit) setPicked(hit.ref);
+              if (hit && "agent" in hit) setPicked(hit.agent.ref);
+              if (hit && "ref" in hit) setLens({ ref: hit.ref });
+              if (hit && "text" in hit) setLens({ text: hit.text });
               setFinding(undefined);
             }}
           />

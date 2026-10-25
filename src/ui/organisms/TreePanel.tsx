@@ -1,6 +1,8 @@
+import { Button } from "@gpuix/react";
 import { useMemo } from "react";
 import type { AgentView, Floor, WorkspaceView } from "@/domain/floor.ts";
 import type { AgentRef } from "@/domain/ids.ts";
+import { file, folder, type Ref } from "@/domain/ref.ts";
 import { baseName } from "@/domain/workspace.ts";
 import { Column, Row } from "@/ui/atoms/Box.tsx";
 import { Text } from "@/ui/atoms/Text.tsx";
@@ -17,12 +19,14 @@ const Workspace = ({
   now,
   width,
   selected,
+  onPick,
 }: {
   space: WorkspaceView;
   agents: ReadonlyMap<AgentRef, AgentView>;
   now: number;
   width: number;
   selected?: AgentRef;
+  onPick: (ref: Ref) => void;
 }) => {
   const r = useMetrics();
   const theme = useTheme();
@@ -76,8 +80,13 @@ const Workspace = ({
           const mine = selected !== undefined && selected in node.agents;
           const color = node.collided ? theme.failed : theme.text;
           return (
-            <div
+            <Button
               key={node.path}
+              onClick={() =>
+                onPick(
+                  node.kind === "folder" ? folder(node.path) : file(node.path),
+                )
+              }
               style={{
                 position: "absolute",
                 left: x,
@@ -132,7 +141,7 @@ const Workspace = ({
                   ⚠
                 </Text>
               ) : null}
-            </div>
+            </Button>
           );
         })}
       </div>
@@ -146,11 +155,13 @@ export const TreePanel = ({
   now,
   width,
   selected,
+  onPick,
 }: {
   floor: Floor;
   now: number;
   width: number;
   selected?: AgentRef;
+  onPick: (ref: Ref) => void;
 }) => {
   const r = useMetrics();
   const agents = useMemo(
@@ -184,6 +195,7 @@ export const TreePanel = ({
             now={now}
             width={width}
             selected={selected}
+            onPick={onPick}
           />
         ))
       )}

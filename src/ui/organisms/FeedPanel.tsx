@@ -1,12 +1,48 @@
+import { Button } from "@gpuix/react";
 import type { FeedItem, Floor } from "@/domain/floor.ts";
-import { Column, Row } from "@/ui/atoms/Box.tsx";
+import { Box, Column, Row } from "@/ui/atoms/Box.tsx";
 import { Dot } from "@/ui/atoms/Dot.tsx";
 import { Text } from "@/ui/atoms/Text.tsx";
 import { useMetrics, useTheme } from "@/ui/lib/context.ts";
 import { duration } from "@/ui/lib/format.ts";
+import { histogram, type Lens, lensName } from "@/ui/lib/lens.ts";
 import { harnessColor } from "@/ui/lib/look.ts";
+import { alpha } from "@/ui/lib/theme.ts";
 
 const SHOWN = 10;
+const SLICES = 24;
+
+const Histogram = ({
+  items,
+  now,
+  width,
+}: {
+  items: readonly FeedItem[];
+  now: number;
+  width: number;
+}) => {
+  const r = useMetrics();
+  const theme = useTheme();
+  const bins = histogram(items, now, SLICES);
+  const top = Math.max(1, ...bins);
+  const slot = width / SLICES;
+  return (
+    <Row style={{ height: r.row, alignItems: "flex-end" }}>
+      {bins.map((n, i) => (
+        <Box
+          // biome-ignore lint/suspicious/noArrayIndexKey: slices are positions
+          key={i}
+          style={{
+            width: Math.max(1, slot - 2),
+            marginRight: 2,
+            height: Math.max(n > 0 ? 2 : 0, Math.round((n / top) * r.row)),
+            backgroundColor: alpha(theme.dim, 0.7),
+          }}
+        />
+      ))}
+    </Row>
+  );
+};
 
 const Line = ({
   item,
@@ -48,12 +84,18 @@ const Line = ({
 // What every agent did most recently, newest first.
 export const FeedPanel = ({
   floor,
+  items,
+  lens,
   now,
   width,
+  onClear,
 }: {
   floor: Floor;
+  items: readonly FeedItem[];
+  lens?: Lens;
   now: number;
   width: number;
+  onClear: () => void;
 }) => {
   const r = useMetrics();
   const agents = new Map(floor.agents.map((a) => [a.ref, a]));
@@ -63,8 +105,22 @@ export const FeedPanel = ({
         <Text size="small" tone="dim">
           FEED
         </Text>
+        {lens ? (
+          <Button
+            onClick={onClear}
+            style={{ paddingLeft: r.dot, height: r.row }}
+          >
+            <Text size="small">{`${lensName(lens)} ×`}</Text>
+          </Button>
+        ) : null}
       </Row>
-      {floor.feed.slice(0, SHOWN).map((item) => {
+      <Histogram items={items} now={now} width={width - r.dot} />
+      {items.length === 0 ? (
+        <Text size="small" tone="dim">
+          nothing matches
+        </Text>
+      ) : null}
+      {items.slice(0, SHOWN).map((item) => {
         const a = agents.get(item.agent);
         return (
           <Line

@@ -1,14 +1,56 @@
-import type { AgentView } from "@/domain/floor.ts";
+import { refLabel } from "@/domain/pivot.ts";
 import { baseName } from "@/domain/workspace.ts";
 import { Column, Row } from "@/ui/atoms/Box.tsx";
 import { Text } from "@/ui/atoms/Text.tsx";
 import { useMetrics, useTheme } from "@/ui/lib/context.ts";
 import { harnessColor, stateLook } from "@/ui/lib/look.ts";
+import type { Hit as PaletteHit } from "@/ui/lib/palette.ts";
 import { alpha } from "@/ui/lib/theme.ts";
 
 const SHOWN = 8;
 
-// Type to find any agent; Enter jumps to the highlighted one.
+const Hit = ({ hit }: { hit: PaletteHit }) => {
+  const theme = useTheme();
+  if ("agent" in hit) {
+    const a = hit.agent;
+    const look = stateLook(a.state, theme);
+    return (
+      <>
+        <Text style={{ color: look.color }}>{look.glyph}</Text>
+        <Text style={{ color: harnessColor(a.harness, theme) }}>
+          {a.harness}
+        </Text>
+        <Text style={{ flexGrow: 1 }}>{a.name}</Text>
+        <Text size="small" tone="dim">
+          {baseName(a.workspace)}
+        </Text>
+      </>
+    );
+  }
+  if ("ref" in hit) {
+    return (
+      <>
+        <Text size="small" tone="dim" style={{ width: 60 }}>
+          {hit.ref._tag.toLowerCase()}
+        </Text>
+        <Text style={{ flexGrow: 1, minWidth: 0 }}>{refLabel(hit.ref)}</Text>
+        <Text size="small" tone="dim">
+          {`${hit.count}`}
+        </Text>
+      </>
+    );
+  }
+  return (
+    <>
+      <Text size="small" tone="dim" style={{ width: 60 }}>
+        feed
+      </Text>
+      <Text>{`filter the feed by "${hit.text}"`}</Text>
+    </>
+  );
+};
+
+// Type to find an agent or anything agents touched; Enter picks the highlighted one.
 export const Palette = ({
   query,
   results,
@@ -18,7 +60,7 @@ export const Palette = ({
   onSubmit,
 }: {
   query: string;
-  results: readonly AgentView[];
+  results: readonly PaletteHit[];
   index: number;
   width: number;
   onQuery: (query: string) => void;
@@ -45,7 +87,7 @@ export const Palette = ({
         // biome-ignore lint/a11y/noAutofocus: a gpuix input receives no keys without it
         autoFocus
         value={query}
-        placeholder="find an agent by name, harness, state or workspace"
+        placeholder="find an agent, file, host, MCP server, skill or model"
         onChange={(e) => onQuery(e.value ?? "")}
         onSubmit={onSubmit}
         style={{
@@ -54,30 +96,19 @@ export const Palette = ({
           fontSize: r.font.body,
         }}
       />
-      {results.slice(0, SHOWN).map((a, i) => {
-        const look = stateLook(a.state, theme);
-        return (
-          <Row
-            key={a.ref}
-            gap={r.dot}
-            style={{
-              height: r.row,
-              paddingLeft: r.dot,
-              backgroundColor:
-                i === index ? alpha(theme.text, 0.12) : undefined,
-            }}
-          >
-            <Text style={{ color: look.color }}>{look.glyph}</Text>
-            <Text style={{ color: harnessColor(a.harness, theme) }}>
-              {a.harness}
-            </Text>
-            <Text style={{ flexGrow: 1 }}>{a.name}</Text>
-            <Text size="small" tone="dim">
-              {baseName(a.workspace)}
-            </Text>
-          </Row>
-        );
-      })}
+      {results.slice(0, SHOWN).map((hit, i) => (
+        <Row
+          key={"agent" in hit ? hit.agent.ref : JSON.stringify(hit)}
+          gap={r.dot}
+          style={{
+            height: r.row,
+            paddingLeft: r.dot,
+            backgroundColor: i === index ? alpha(theme.text, 0.12) : undefined,
+          }}
+        >
+          <Hit hit={hit} />
+        </Row>
+      ))}
       {results.length === 0 ? (
         <Text size="small" tone="dim">
           nothing matches

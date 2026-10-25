@@ -13,7 +13,7 @@ One view with no sub-pages: a fixed top bar, a scrolling main and a fixed contro
 - Fleet: a row per agent grouped by workspace, with its state, model, current act, context fill and insights, and its own lane on one shared time axis; runtimes such as Ollama beside the agents using them
 - Where they work: each workspace's touched files as a tree, with agents drawn on the nodes and a mark where two agents meet on a file
 - Detail: for the selected agent, what it is doing, its context, plan and tasks, and setup, side by side
-- Feed and changes: what every agent did lately and the files edited across agents
+- Feed and changes: what every agent did lately with an activity histogram, and the files edited across agents
 - A facet a harness cannot report shows `n/a` instead of zero
 
 ## Install
@@ -50,7 +50,7 @@ bun run live   # real local threads and processes
 | --- | --- |
 | `up` / `down` | previous / next agent |
 | `n` / `N` | next / previous agent that needs attention |
-| `/` | find an agent |
+| `/` | find an agent, or a file, host, MCP server, skill or model to filter the feed (click a tree node to do the same) |
 | `+` / `-` | zoom the time lanes |
 | `esc` | clear the selection |
 | `?` | help |

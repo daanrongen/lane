@@ -5,9 +5,12 @@ import { useMetrics, useTheme } from "@/ui/lib/context.ts";
 const KEYS: readonly (readonly [string, string])[] = [
   ["up / down", "select the previous or next agent"],
   ["n / N", "jump to the next or previous agent that needs attention"],
-  ["/", "find an agent"],
+  [
+    "/",
+    "find an agent, or a file, host, MCP server, skill or model to filter the feed",
+  ],
   ["+ / -", "zoom the time lanes"],
-  ["esc", "clear the selection"],
+  ["esc", "clear the feed filter, then the selection"],
   ["?", "show or hide this help"],
   ["q", "quit"],
 ];

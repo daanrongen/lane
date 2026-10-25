@@ -14,6 +14,8 @@ import {
 } from "@/ui/lib/look.ts";
 import { alpha } from "@/ui/lib/theme.ts";
 
+const mark = { kind: "spawn", failed: false, awaiting: false } as const;
+
 export interface FleetColumns {
   readonly facts: number;
   readonly lane: number;
@@ -75,6 +77,15 @@ export const FleetRow = ({
   const quiet = agent.lastEventAt
     ? duration((now - agent.lastEventAt) / 1000)
     : "";
+  const handoff =
+    agent.born === undefined
+      ? undefined
+      : place(
+          { ...mark, start: agent.born, end: agent.born },
+          now,
+          cols.span,
+          cols.lane,
+        );
   const what = agent.now?.label ?? note ?? agent.state;
   return (
     <Row
@@ -138,6 +149,30 @@ export const FleetRow = ({
             }}
           />
         ))}
+        {handoff ? (
+          <>
+            <div
+              style={{
+                position: "absolute",
+                left: handoff.x,
+                top: 0,
+                width: 1,
+                height: Math.round(r.row / 2),
+                backgroundColor: color,
+              }}
+            />
+            <div
+              style={{
+                position: "absolute",
+                left: handoff.x,
+                top: Math.round(r.row / 2),
+                width: r.dot,
+                height: 1,
+                backgroundColor: color,
+              }}
+            />
+          </>
+        ) : null}
         {agent.lane.map((bar) => {
           const at = place(bar, now, cols.span, cols.lane);
           if (!at) return null;
