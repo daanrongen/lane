@@ -256,7 +256,7 @@ export const DetailPanel = ({
   const col = r.compact ? width : Math.floor((width - r.pad * 3) / 4);
   const look = stateLook(agent.state, theme);
   return (
-    <Column gap={r.dot}>
+    <Column gap={r.pad}>
       <Row gap={r.dot}>
         <Text
           style={{ color: look.color }}
@@ -290,11 +290,11 @@ export const DetailPanel = ({
             </>
           )}
         </Column>
-        <Column gap={r.dot} style={{ width: col }}>
+        <Column gap={r.pad} style={{ width: col }}>
           <Plan run={run} agent={agent} />
           <Tasks agent={agent} tasks={tasks} />
         </Column>
-        <Column gap={r.dot} style={{ width: col }}>
+        <Column gap={r.pad} style={{ width: col }}>
           <Heading>SETUP</Heading>
           <McpServers servers={mcpServers(run.setups, run.spans)} />
           <UsageRow title="SKILLS" chips={skills} />

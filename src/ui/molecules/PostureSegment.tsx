@@ -28,8 +28,8 @@ export const PostureSegment = ({ box }: { box: PostureBox }) => {
         alignItems: "center",
         paddingLeft: r.dot,
         borderRadius: 3,
-        backgroundColor: alpha(color, 0.18),
-        borderLeftWidth: 2,
+        backgroundColor: alpha(color, 0.35),
+        borderLeftWidth: 3,
         borderColor: color,
         overflow: "hidden",
       }}
