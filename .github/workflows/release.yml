@@ -1,0 +1,92 @@
+name: Release
+
+# Cut a release with `git tag vX.Y.Z && git push origin vX.Y.Z`. `bump` sets the version in
+# package.json from the tag and commits it to main; everything downstream builds from that
+# commit (one ahead of the tag), so `lane --version` always matches the tag.
+on:
+  push:
+    tags: ["v*.*.*"]
+
+permissions:
+  contents: read
+
+jobs:
+  bump:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    outputs:
+      sha: ${{ steps.bump.outputs.sha }}
+    steps:
+      - name: Tag is vX.Y.Z
+        run: |
+          if [[ ! "$GITHUB_REF_NAME" =~ ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
+            echo "::error::$GITHUB_REF_NAME is not a semver tag (expected vX.Y.Z)"
+            exit 1
+          fi
+
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Bump package.json, commit to main
+        id: bump
+        run: |
+          sed -i -E "s/^  \"version\": \".*\"/  \"version\": \"${GITHUB_REF_NAME#v}\"/" package.json
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add package.json
+          if git diff --cached --quiet; then
+            echo "already at $GITHUB_REF_NAME"
+          else
+            git commit -m "chore(release): $GITHUB_REF_NAME"
+            git push origin HEAD:main
+          fi
+          echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+  test:
+    needs: bump
+    uses: ./.github/workflows/test.yml
+    with:
+      ref: ${{ needs.bump.outputs.sha }}
+
+  bundle:
+    needs: [bump, test]
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.bump.outputs.sha }}
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.4
+
+      - run: bun install --frozen-lockfile --ignore-scripts
+
+      - run: scripts/bundle.sh
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: bundle
+          path: dist/lane-*-macos-arm64.tar.gz*
+          compression-level: 0
+
+  github-release:
+    needs: [bump, bundle]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.bump.outputs.sha }}
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: bundle
+          path: dist
+
+      - run: gh release create "$GITHUB_REF_NAME" dist/* --generate-notes --target "${{ needs.bump.outputs.sha }}"
+        env:
+          GH_TOKEN: ${{ github.token }}

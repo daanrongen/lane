@@ -1,0 +1,38 @@
+name: Publish Homebrew formula
+
+# Runs after Release succeeds. (A release created with GITHUB_TOKEN does not
+# fire `release: published`, but it does complete a workflow_run.) The tap
+# owns its formula; this only tells it which bundle to point at.
+on:
+  workflow_run:
+    workflows: [Release]
+    types: [completed]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Release tag to publish, e.g. v0.1.0
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    env:
+      TAG: ${{ inputs.tag || github.event.workflow_run.head_branch }}
+    steps:
+      - name: Send the bundle to the tap
+        run: |
+          set -o pipefail
+          version="${TAG#v}"
+          base="https://github.com/${{ github.repository }}/releases/download/$TAG/lane-$version-macos-arm64.tar.gz"
+          sha="$(curl -fsSL "$base.sha256" | cut -d' ' -f1)"
+          gh api "repos/${{ vars.HOMEBREW_TAP_OWNER }}/${{ vars.HOMEBREW_TAP_REPO }}/dispatches" \
+            -f event_type=release \
+            -f "client_payload[version]=$version" \
+            -f "client_payload[url]=$base" \
+            -f "client_payload[sha256]=$sha"
+        env:
+          GH_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
