@@ -21,6 +21,8 @@ export type Signal =
     }
   | { readonly _tag: "Fill"; readonly used: number; readonly window?: number }
   | ({ readonly _tag: "Usage" } & Usage)
+  // Spend so far in US dollars, as the harness totals it.
+  | { readonly _tag: "Cost"; readonly usd: number }
   | {
       readonly _tag: "Limit";
       // A quota window: "5h", "weekly".

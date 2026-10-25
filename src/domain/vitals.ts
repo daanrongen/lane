@@ -19,6 +19,8 @@ export interface Vitals {
   readonly usage: Usage;
   readonly modes: Readonly<Record<string, string>>;
   readonly limits: readonly Limit[];
+  // US dollars spent, when the harness totals it.
+  readonly cost?: number;
 }
 
 export const vitals = (run: Run, agentId: AgentId): Vitals => {
@@ -43,6 +45,8 @@ export const vitals = (run: Run, agentId: AgentId): Vitals => {
     if (r.signal._tag === "Limit") limits.set(r.signal.window, r.signal);
   }
 
+  const cost = readings.findLast((r) => r.signal._tag === "Cost");
+
   return {
     model: named?.model,
     provider: named?.provider ?? providerOf(named?.model),
@@ -55,5 +59,6 @@ export const vitals = (run: Run, agentId: AgentId): Vitals => {
     usage: turns.reduce((u, t) => addUsage(u, t.usage), emptyUsage),
     modes,
     limits: [...limits.values()],
+    cost: cost?.signal._tag === "Cost" ? cost.signal.usd : undefined,
   };
 };

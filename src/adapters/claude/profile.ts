@@ -20,5 +20,6 @@ export const claudeProfile: HarnessProfile = {
     tasks: "native",
     context: "partial",
     usage: "native",
+    cost: "partial",
   },
 };

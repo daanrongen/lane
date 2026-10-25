@@ -538,6 +538,18 @@ export const makeDecoder = (cfg: DecoderConfig): Decoder => {
       if (line?.type === "permission-mode") {
         return modeChanged(str(line.permissionMode));
       }
+      // Spend so far; it carries no timestamp either.
+      if (line?.type === "cost-state") {
+        const usd = num(line.totalCostUSD);
+        return usd
+          ? [
+              {
+                _tag: "SignalReported",
+                reading: { agentId, at: last, signal: { _tag: "Cost", usd } },
+              },
+            ]
+          : [];
+      }
       const ts = Date.parse(str(line?.timestamp) ?? "");
       if (!line || Number.isNaN(ts)) return [];
       const at = (ts - cfg.origin) / 1000;

@@ -12,7 +12,7 @@ import type { Task } from "@/domain/task.ts";
 import { Column, Row } from "@/ui/atoms/Box.tsx";
 import { Text } from "@/ui/atoms/Text.tsx";
 import { useMetrics, useTheme } from "@/ui/lib/context.ts";
-import { clip, duration, exact, modelName } from "@/ui/lib/format.ts";
+import { clip, dollars, duration, exact, modelName } from "@/ui/lib/format.ts";
 import { stateLook } from "@/ui/lib/look.ts";
 import { skillChips } from "@/ui/lib/usageRows.ts";
 import { ContextMap } from "@/ui/organisms/ContextMap.tsx";
@@ -97,6 +97,7 @@ const Now = ({
         {[
           agent.harness,
           agent.model && modelName(agent.model),
+          agent.cost !== undefined && dollars(agent.cost),
           ...Object.entries(agent.modes).map(([k, v]) => `${k} ${v}`),
         ]
           .filter(Boolean)

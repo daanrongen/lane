@@ -72,6 +72,7 @@ export interface AgentView {
   };
   readonly usage: Usage;
   readonly limits: readonly Limit[];
+  readonly cost?: number;
   readonly progress: { readonly done: number; readonly total: number };
   readonly next?: string;
   readonly modes: Readonly<Record<string, string>>;
@@ -134,6 +135,8 @@ export interface Floor {
   readonly totals: {
     readonly states: Readonly<Record<AgentState, number>>;
     readonly usage: Usage;
+    // Dollars spent by the agents that report it; none when none do.
+    readonly cost?: number;
   };
 }
 
@@ -253,6 +256,7 @@ export const floor = (
         fill: s.vitals.fill,
         usage: s.vitals.usage,
         limits: s.vitals.limits,
+        cost: s.vitals.cost,
         progress: s.progress,
         next: s.next,
         modes: s.vitals.modes,
@@ -347,8 +351,14 @@ export const floor = (
         STATES.map((s) => [s, agents.filter((a) => a.state === s).length]),
       ) as Record<AgentState, number>,
       usage: agents.reduce((u, a) => addUsage(u, a.usage), emptyUsage),
+      cost: spent(agents),
     },
   };
+};
+
+const spent = (agents: readonly AgentView[]) => {
+  const costs = agents.flatMap((a) => (a.cost === undefined ? [] : [a.cost]));
+  return costs.length ? costs.reduce((a, b) => a + b) : undefined;
 };
 
 const latest = (agents: readonly AgentView[], root: string) =>

@@ -3,6 +3,7 @@ import {
   beat,
   call,
   compact,
+  cost,
   ctx,
   delegate,
   finish,
@@ -51,6 +52,7 @@ const billing: Script = {
   age: 150,
   beats: (t) => [
     spawn(main, "billing-refactor", 0, null),
+    cost(main, 0, 6.89),
     beat(0, {
       _tag: "LinkMade",
       link: {
@@ -318,6 +320,7 @@ const ops: Script = {
   age: 90,
   beats: () => [
     spawn(main, "incident-482", 0, null),
+    cost(main, 0, 0.74),
     mode(main, 0, "permission", "default"),
     ...call(main, "mcp__github__get_issue", "get_issue #482", 5, {
       end: 9,

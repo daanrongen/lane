@@ -390,6 +390,19 @@ describe("how the work is steered", () => {
     ]);
   });
 
+  test("the cost state is a spend reading, the latest one winning", () => {
+    const run = fold([
+      assistant(1, "m1", [{ type: "text" }]),
+      { type: "cost-state", totalCostUSD: 1.5 },
+      { type: "cost-state", totalCostUSD: 2.25 },
+      { type: "cost-state", totalCostUSD: 0 },
+    ]);
+    const costs = run.readings.flatMap((r) =>
+      r.signal._tag === "Cost" ? [r.signal.usd] : [],
+    );
+    expect(costs).toEqual([1.5, 2.25]);
+  });
+
   test("a turn knows its provider", () => {
     const run = fold([
       {

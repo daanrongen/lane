@@ -198,6 +198,12 @@ export const limit = (
     reading: { agentId, at, signal: { _tag: "Limit", window, used, resetsAt } },
   });
 
+export const cost = (agentId: AgentId, at: number, usd: number) =>
+  beat(at, {
+    _tag: "SignalReported",
+    reading: { agentId, at, signal: { _tag: "Cost", usd } },
+  });
+
 export const ctx = (
   agentId: AgentId,
   kind: "Message" | "File" | "Tool",

@@ -6,6 +6,9 @@ export const duration = (seconds: number) => {
   return `${Math.floor(s / 3600)}h${String(Math.floor((s % 3600) / 60)).padStart(2, "0")}m`;
 };
 
+export const dollars = (usd: number) =>
+  usd < 0.01 ? "<$0.01" : `$${usd.toFixed(2)}`;
+
 const fixed = (n: number) => n.toFixed(1).replace(/\.0$/, "");
 
 export const tokens = (n: number) =>

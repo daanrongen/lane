@@ -3,7 +3,7 @@ import type { Floor } from "@/domain/floor.ts";
 import { Row } from "@/ui/atoms/Box.tsx";
 import { Text } from "@/ui/atoms/Text.tsx";
 import { useMetrics, useTheme } from "@/ui/lib/context.ts";
-import { tokens } from "@/ui/lib/format.ts";
+import { dollars, tokens } from "@/ui/lib/format.ts";
 import { harnessColor, stateLook } from "@/ui/lib/look.ts";
 
 const STATES: readonly AgentState[] = [
@@ -48,7 +48,12 @@ export const TopBar = ({ floor }: { floor: Floor }) => {
             </Text>
           ))}
         <Text size="small" tone="dim">
-          {`${tokens(floor.totals.usage.output)} out`}
+          {[
+            `${tokens(floor.totals.usage.output)} out`,
+            floor.totals.cost !== undefined && dollars(floor.totals.cost),
+          ]
+            .filter(Boolean)
+            .join(" · ")}
         </Text>
         <Text size="small" tone="dim">
           / search
