@@ -10,10 +10,10 @@
     "shot": "bun src/bin/shot.tsx",
     "typecheck": "tsc --noEmit -p .",
     "build": "bun build --compile src/bin/binary.ts --outfile dist/lane && rm -f .*.bun-build",
-    "format": "env -u BIOME_CONFIG_PATH biome format --write src",
+    "format": "biome format --write src",
     "prepare": "lefthook install",
     "test": "bun test ./src",
-    "check": "env -u BIOME_CONFIG_PATH biome check src"
+    "check": "biome check src"
   },
   "dependencies": {
     "@effect/platform-bun": "4.0.6",
