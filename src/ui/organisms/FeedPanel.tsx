@@ -5,7 +5,7 @@ import { Dot } from "@/ui/atoms/Dot.tsx";
 import { Text } from "@/ui/atoms/Text.tsx";
 import { useMetrics, useTheme } from "@/ui/lib/context.ts";
 import { duration } from "@/ui/lib/format.ts";
-import { histogram, type Lens, lensName } from "@/ui/lib/lens.ts";
+import { about, histogram, type Lens, whatName } from "@/ui/lib/lens.ts";
 import { harnessColor } from "@/ui/lib/look.ts";
 import { alpha } from "@/ui/lib/theme.ts";
 
@@ -16,30 +16,50 @@ const Histogram = ({
   items,
   now,
   width,
+  during,
+  onPick,
 }: {
   items: readonly FeedItem[];
   now: number;
   width: number;
+  during?: Lens["during"];
+  onPick: (during: Lens["during"]) => void;
 }) => {
   const r = useMetrics();
   const theme = useTheme();
   const bins = histogram(items, now, SLICES);
-  const top = Math.max(1, ...bins);
+  const top = Math.max(1, ...bins.map((b) => b.count));
   const slot = width / SLICES;
   return (
     <Row style={{ height: r.row, alignItems: "flex-end" }}>
-      {bins.map((n, i) => (
-        <Box
-          // biome-ignore lint/suspicious/noArrayIndexKey: slices are positions
-          key={i}
-          style={{
-            width: Math.max(1, slot - 2),
-            marginRight: 2,
-            height: Math.max(n > 0 ? 2 : 0, Math.round((n / top) * r.row)),
-            backgroundColor: alpha(theme.dim, 0.7),
-          }}
-        />
-      ))}
+      {bins.map((b) => {
+        const on = during?.[0] === b.from;
+        return (
+          <Button
+            key={b.from}
+            onClick={() => onPick(on ? undefined : [b.from, b.to])}
+            style={{
+              width: Math.max(1, slot - 2),
+              marginRight: 2,
+              height: r.row,
+              display: "flex",
+              flexDirection: "column",
+              justifyContent: "flex-end",
+            }}
+          >
+            <Box
+              style={{
+                width: "100%",
+                height: Math.max(
+                  b.count > 0 ? 2 : 0,
+                  Math.round((b.count / top) * r.row),
+                ),
+                backgroundColor: on ? theme.text : alpha(theme.dim, 0.7),
+              }}
+            />
+          </Button>
+        );
+      })}
     </Row>
   );
 };
@@ -88,14 +108,14 @@ export const FeedPanel = ({
   lens,
   now,
   width,
-  onClear,
+  onLens,
 }: {
   floor: Floor;
   items: readonly FeedItem[];
   lens?: Lens;
   now: number;
   width: number;
-  onClear: () => void;
+  onLens: (lens: Lens | undefined) => void;
 }) => {
   const r = useMetrics();
   const agents = new Map(floor.agents.map((a) => [a.ref, a]));
@@ -107,14 +127,27 @@ export const FeedPanel = ({
         </Text>
         {lens ? (
           <Button
-            onClick={onClear}
+            onClick={() => onLens(undefined)}
             style={{ paddingLeft: r.dot, height: r.row }}
           >
-            <Text size="small">{`${lensName(lens)} ×`}</Text>
+            <Text size="small">
+              {`${[
+                lens.what && whatName(lens.what),
+                lens.during && `${duration((now - lens.during[0]) / 1000)} ago`,
+              ]
+                .filter(Boolean)
+                .join(" · ")} ×`}
+            </Text>
           </Button>
         ) : null}
       </Row>
-      <Histogram items={items} now={now} width={width - r.dot} />
+      <Histogram
+        items={about(floor, lens?.what)}
+        now={now}
+        width={width - r.dot}
+        during={lens?.during}
+        onPick={(during) => onLens({ ...lens, during })}
+      />
       {items.length === 0 ? (
         <Text size="small" tone="dim">
           nothing matches

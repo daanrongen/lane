@@ -171,7 +171,7 @@ export const FloorPage = ({ ports, keys }: { ports: UiPorts; keys: Keys }) => {
               now={now}
               width={r.compact ? total : total - fleetWidth - r.pad}
               selected={selected}
-              onPick={(ref) => setLens({ ref })}
+              onPick={(ref) => setLens({ what: { ref } })}
             />
           </Box>
           <DetailPanel
@@ -195,7 +195,7 @@ export const FloorPage = ({ ports, keys }: { ports: UiPorts; keys: Keys }) => {
               lens={lens}
               now={now}
               width={half}
-              onClear={() => setLens(undefined)}
+              onLens={setLens}
             />
             <ChangesPanel floor={floor} now={now} width={half} />
           </Box>
@@ -213,8 +213,8 @@ export const FloorPage = ({ ports, keys }: { ports: UiPorts; keys: Keys }) => {
             onSubmit={() => {
               const hit = found[finding.index];
               if (hit && "agent" in hit) setPicked(hit.agent.ref);
-              if (hit && "ref" in hit) setLens({ ref: hit.ref });
-              if (hit && "text" in hit) setLens({ text: hit.text });
+              if (hit && "ref" in hit) setLens({ what: { ref: hit.ref } });
+              if (hit && "text" in hit) setLens({ what: { text: hit.text } });
               setFinding(undefined);
             }}
           />
