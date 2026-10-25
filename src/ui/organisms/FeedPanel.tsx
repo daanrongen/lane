@@ -1,5 +1,6 @@
 import { Button } from "@gpuix/react";
 import type { FeedItem, Floor } from "@/domain/floor.ts";
+import type { AgentRef } from "@/domain/ids.ts";
 import { Box, Column, Row } from "@/ui/atoms/Box.tsx";
 import { Dot } from "@/ui/atoms/Dot.tsx";
 import { Text } from "@/ui/atoms/Text.tsx";
@@ -69,7 +70,9 @@ const Line = ({
   who,
   harness,
   now,
+  mine,
 }: {
+  mine: boolean;
   item: FeedItem;
   who: string;
   harness: string;
@@ -79,7 +82,13 @@ const Line = ({
   const theme = useTheme();
   const bad = item.status === "failed" || item.status === "denied";
   return (
-    <Row gap={r.dot} style={{ height: r.row }}>
+    <Row
+      gap={r.dot}
+      style={{
+        height: r.row,
+        backgroundColor: mine ? alpha(theme.text, 0.1) : undefined,
+      }}
+    >
       <Text size="small" tone="dim" style={{ width: r.charWidth * 6 }}>
         {duration((now - item.at) / 1000)}
       </Text>
@@ -109,7 +118,9 @@ export const FeedPanel = ({
   now,
   width,
   onLens,
+  selected,
 }: {
+  selected?: AgentRef;
   floor: Floor;
   items: readonly FeedItem[];
   lens?: Lens;
@@ -162,6 +173,7 @@ export const FeedPanel = ({
             who={a?.name ?? ""}
             harness={a?.harness ?? ""}
             now={now}
+            mine={item.agent === selected}
           />
         );
       })}

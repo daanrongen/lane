@@ -200,8 +200,14 @@ export const FloorPage = ({ ports, keys }: { ports: UiPorts; keys: Keys }) => {
               now={now}
               width={half}
               onLens={setLens}
+              selected={selected}
             />
-            <ChangesPanel floor={floor} now={now} width={half} />
+            <ChangesPanel
+              floor={floor}
+              now={now}
+              width={half}
+              selected={selected}
+            />
           </Box>
         </PaneTemplate>
         {help ? (
