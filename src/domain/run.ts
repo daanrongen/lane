@@ -1,4 +1,8 @@
-import type { AgentId, SessionId, SpanId } from "@/domain/ids.ts";
+import type { Act } from "@/domain/act.ts";
+import type { AgentId, SpanId, ThreadId } from "@/domain/ids.ts";
+import type { Link } from "@/domain/link.ts";
+import type { Plan } from "@/domain/plan.ts";
+import type { Reading } from "@/domain/signal.ts";
 
 export interface Usage {
   readonly input: number;
@@ -109,7 +113,12 @@ export interface SkillUse {
 export interface ModeChange {
   readonly agentId: AgentId;
   readonly at: number;
-  readonly kind: "permission" | "approval" | "sandbox" | "effort";
+  readonly kind:
+    | "permission"
+    | "approval"
+    | "sandbox"
+    | "effort"
+    | "collaboration";
   readonly value: string;
 }
 
@@ -128,7 +137,7 @@ export interface Setup {
 
 // Times are seconds from startedAt (epoch ms).
 export interface Run {
-  readonly sessionId: SessionId;
+  readonly threadId: ThreadId;
   readonly startedAt: number;
   readonly agents: readonly Agent[];
   readonly spans: readonly Span[];
@@ -140,10 +149,14 @@ export interface Run {
   readonly requests: readonly Request[];
   readonly skills: readonly SkillUse[];
   readonly modes: readonly ModeChange[];
+  readonly acts: readonly Act[];
+  readonly readings: readonly Reading[];
+  readonly links: readonly Link[];
+  readonly plans: readonly Plan[];
 }
 
-export const emptyRun = (sessionId: SessionId, startedAt: number): Run => ({
-  sessionId,
+export const emptyRun = (threadId: ThreadId, startedAt: number): Run => ({
+  threadId,
   startedAt,
   agents: [],
   spans: [],
@@ -155,4 +168,8 @@ export const emptyRun = (sessionId: SessionId, startedAt: number): Run => ({
   requests: [],
   skills: [],
   modes: [],
+  acts: [],
+  readings: [],
+  links: [],
+  plans: [],
 });

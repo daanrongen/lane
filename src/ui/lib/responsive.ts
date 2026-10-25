@@ -13,6 +13,8 @@ export interface Responsive {
   readonly plotWidth: number;
   readonly pxPerSecond: number;
   readonly rowHeight: number;
+  // One agent in the fleet table.
+  readonly row: number;
   readonly barHeight: number;
   readonly contextHeight: number;
   readonly dot: number;
@@ -59,6 +61,7 @@ export const responsive = (
     plotWidth: Math.max(160, inner - labels),
     pxPerSecond: 2 * zoom,
     rowHeight: px(44),
+    row: px(26),
     barHeight: px(22),
     contextHeight: px(130),
     dot: px(8),

@@ -7,7 +7,7 @@ import { parseJson } from "@/adapters/shared/json.ts";
 import { startOf } from "@/adapters/shared/origin.ts";
 import { tail } from "@/adapters/shared/tail.ts";
 import type { RunEvent } from "@/domain/events.ts";
-import { AgentId, type SessionId } from "@/domain/ids.ts";
+import { AgentId, type ThreadId } from "@/domain/ids.ts";
 import { RunSource } from "@/ports/RunSource.ts";
 import { SourceError } from "@/ports/SourceError.ts";
 
@@ -28,7 +28,7 @@ export const RunSourceFs = (poll: Schedule.Schedule<unknown>) =>
       const fs = yield* FileSystem.FileSystem;
       const home = yield* ClaudeHome;
 
-      const events = (id: SessionId) =>
+      const events = (id: ThreadId) =>
         Stream.unwrap(
           Effect.gen(function* () {
             const { file, subagents } = yield* locateTranscript(fs, home, id);

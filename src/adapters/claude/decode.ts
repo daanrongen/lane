@@ -12,11 +12,20 @@ import {
   sizeOf,
   tokensOf,
 } from "@/adapters/shared/sizing.ts";
+import {
+  commandRefs,
+  hostRefs,
+  shellWrites,
+  subjectRefs,
+  touchEvents,
+} from "@/adapters/shared/touches.ts";
+import type { Approval, Edit } from "@/domain/act.ts";
 import type { RunEvent } from "@/domain/events.ts";
-import { AgentId, SpanId } from "@/domain/ids.ts";
+import { ActId, AgentId, SpanId } from "@/domain/ids.ts";
 import { mcpName } from "@/domain/mcp.ts";
 import { providerOf } from "@/domain/models.ts";
 import { type Target, targetsOfCommand } from "@/domain/network.ts";
+import { file, folder, type Ref, skill, subject } from "@/domain/ref.ts";
 import type { Agent, Entry, Usage } from "@/domain/run.ts";
 
 export interface Spawn {
@@ -63,7 +72,48 @@ const targetsOf = (name: string, input: Json | undefined): Target[] => {
   }
 };
 
-const FILE_TOOLS = new Set(["Read", "Edit", "Write", "NotebookEdit"]);
+const FILE_TOOLS = new Set([
+  "Read",
+  "Edit",
+  "Write",
+  "MultiEdit",
+  "NotebookEdit",
+]);
+
+// What a call touches, as far as its input shows.
+const touchesOf = (
+  name: string,
+  input: Json | undefined,
+  targets: readonly Target[],
+): Ref[] => {
+  const path = str(input?.file_path) ?? str(input?.notebook_path);
+  const dir = str(input?.path);
+  return [
+    ...(FILE_TOOLS.has(name) && path ? [file(path)] : []),
+    ...(dir && (name === "Grep" || name === "Glob") ? [folder(dir)] : []),
+    ...(name === "Bash" ? commandRefs(str(input?.command)) : []),
+    ...(name === "Bash"
+      ? shellWrites(str(input?.command)).map((p) => file(p))
+      : []),
+    ...(name === "Skill" && str(input?.skill)
+      ? [skill(String(input?.skill))]
+      : []),
+    ...hostRefs(targets),
+    ...subjectRefs(
+      name === "Bash"
+        ? str(input?.command)
+        : name === "WebFetch"
+          ? str(input?.url)
+          : mcpName(name)
+            ? JSON.stringify(input)
+            : undefined,
+      mcpName(name) !== undefined,
+    ),
+  ];
+};
+
+const shellEdit = (input: Json | undefined): Edit | undefined =>
+  shellWrites(str(input?.command)).length ? { op: "modify" } : undefined;
 
 // Files are grouped by their last two directories.
 const sourceOf = (
@@ -76,6 +126,45 @@ const sourceOf = (
   if (!FILE_TOOLS.has(name) || !path) return { kind: "Tool", label: name };
   const dir = path.split("/").slice(0, -1).slice(-2).join("/");
   return { kind: "File", label: `${dir}/` };
+};
+
+// Who let a call through, as the result line records it.
+const approvalOf = (d: Json | undefined): Approval | undefined => {
+  const decision = str(d?.decision);
+  if (!decision) return undefined;
+  const reason = str(d?.reasonType);
+  const by = str(d?.source)?.startsWith("user")
+    ? "user"
+    : reason === "classifier" || reason === "rule"
+      ? reason
+      : "policy";
+  return {
+    by,
+    rule: by === "rule" ? str(d?.ruleSource) : undefined,
+    outcome: decision === "accept" ? "allow" : "deny",
+  };
+};
+
+const HOOK_FAILURES = new Set([
+  "hook_blocking_error",
+  "hook_non_blocking_error",
+  "hook_error_during_execution",
+  "hook_stopped_continuation",
+  "hook_cancelled",
+]);
+
+// A hook that passed quickly is routine and left out.
+const SLOW_HOOK = 2_000;
+
+const STEP = /^\s*(?:[-*]|\d+[.)])\s+(.+)$/;
+
+// A plan in markdown: the first line is the title, the list items are the steps.
+const planOf = (text: string) => {
+  const lines = text.split("\n").filter((l) => l.trim());
+  return {
+    title: (lines[0] ?? "plan").replace(/^#+\s*/, "").slice(0, 80),
+    steps: lines.flatMap((l) => STEP.exec(l)?.[1]?.slice(0, 100) ?? []),
+  };
 };
 
 const usageOf = (u: Json | undefined): Usage => ({
@@ -92,7 +181,10 @@ export const makeDecoder = (cfg: DecoderConfig): Decoder => {
   const ended = new Set<string>();
   const spans = new Map<string, boolean>(); // tool_use id -> closed
   const sources = new Map<string, Pick<Entry, "kind" | "label">>();
+  const plans = new Set<string>();
+  let lastCall: string | undefined;
   let permission: string | undefined;
+  let effort: string | undefined;
   let announced = false;
   let boundary: number | undefined;
   let last = 0;
@@ -187,10 +279,43 @@ export const makeDecoder = (cfg: DecoderConfig): Decoder => {
       ...requestEvents(agentId, at, name, targetsOf(name, input)),
       ...intents(name, input, at),
     ];
+    if (!SPAWN_TOOLS.has(name)) lastCall = id;
     if (!SPAWN_TOOLS.has(name))
-      return [...entry, ...called(id, name, input, at)];
+      return [
+        ...entry,
+        ...called(id, name, input, at),
+        ...proposed(id, name, input, at),
+        ...touchEvents(
+          id,
+          touchesOf(name, input, targetsOf(name, input)),
+          name === "Bash" ? shellEdit(input) : undefined,
+        ),
+      ];
     pending.set(id, { name, input, at });
     return [...entry, ...resolve(id, false)];
+  };
+
+  const proposed = (
+    id: string,
+    name: string,
+    input: Json | undefined,
+    at: number,
+  ): RunEvent[] => {
+    const text = name === "ExitPlanMode" ? str(input?.plan) : undefined;
+    if (!text) return [];
+    plans.add(id);
+    return [
+      {
+        _tag: "PlanProposed",
+        plan: {
+          id,
+          agentId,
+          at,
+          status: "proposed",
+          ...planOf(text),
+        },
+      },
+    ];
   };
 
   // The tool calls that name a skill.
@@ -238,6 +363,46 @@ export const makeDecoder = (cfg: DecoderConfig): Decoder => {
     ];
   };
 
+  // A hook run that failed or took long, as an act so it shows in the lane and feed.
+  const hook = (a: Json | undefined, line: Json, at: number): RunEvent[] => {
+    const type = str(a?.type) ?? "";
+    const failed = HOOK_FAILURES.has(type);
+    const ms = num(a?.durationMs);
+    if (!a || (!failed && !(type === "hook_success" && ms >= SLOW_HOOK))) {
+      return [];
+    }
+    const name = str(a.hookName) ?? str(a.hookEvent) ?? "hook";
+    const cmd = str(a.command);
+    const why =
+      str(a.stderr) ??
+      str(a.content) ??
+      str(rec(a.blockingError)?.blockingError);
+    return [
+      {
+        _tag: "ActOpened",
+        act: {
+          id: ActId(`hook:${str(line.uuid) ?? at}`),
+          agentId,
+          kind: "tool",
+          tool: "hook",
+          label: [name, cmd].filter(Boolean).join(": ").slice(0, 80),
+          start: Math.max(0, at - ms / 1000),
+          end: at,
+          status: failed ? "failed" : "ok",
+          touches: commandRefs(cmd),
+          failure: failed
+            ? {
+                class: "hook",
+                reason: (why?.split("\n")[0] || type).slice(0, 200),
+              }
+            : undefined,
+          exit: a.exitCode === undefined ? undefined : num(a.exitCode),
+          fidelity: "observed",
+        },
+      },
+    ];
+  };
+
   const reminder = (a: Json | undefined, at: number): RunEvent[] =>
     a && !NOT_CONTEXT.has(String(a.type))
       ? added(
@@ -263,6 +428,14 @@ export const makeDecoder = (cfg: DecoderConfig): Decoder => {
           provider: providerOf(str(msg.model)),
           usage: usageOf(rec(msg.usage)),
         },
+      });
+    }
+    const level = str(line.effort);
+    if (level && level !== effort) {
+      effort = level;
+      events.push({
+        _tag: "ModeChanged",
+        change: { agentId, at, kind: "effort", value: level },
       });
     }
     for (const b of arr(msg.content)) {
@@ -307,7 +480,25 @@ export const makeDecoder = (cfg: DecoderConfig): Decoder => {
     return events;
   };
 
-  const user = (msg: Json, at: number): RunEvent[] =>
+  const decided = (line: Json, id: string, failed: boolean): RunEvent[] => {
+    const approval = approvalOf(rec(line.permissionDecision));
+    return [
+      ...(approval
+        ? [{ _tag: "ActUpdated", id: ActId(id), approval } as const]
+        : []),
+      ...(plans.has(id)
+        ? [
+            {
+              _tag: "PlanDecided",
+              id,
+              status: failed ? "rejected" : "approved",
+            } as const,
+          ]
+        : []),
+    ];
+  };
+
+  const user = (line: Json, msg: Json, at: number): RunEvent[] =>
     (typeof msg.content === "string"
       ? [{ type: "text", text: msg.content }]
       : arr(msg.content)
@@ -328,6 +519,7 @@ export const makeDecoder = (cfg: DecoderConfig): Decoder => {
           IMAGE_TOKENS * 4 * imagesIn(block.content),
         ),
         ...resolve(id, true),
+        ...decided(line, id, block?.is_error === true),
         {
           _tag: "SpanClosed",
           spanId: SpanId(id),
@@ -346,6 +538,18 @@ export const makeDecoder = (cfg: DecoderConfig): Decoder => {
       if (line?.type === "permission-mode") {
         return modeChanged(str(line.permissionMode));
       }
+      // Spend so far; it carries no timestamp either.
+      if (line?.type === "cost-state") {
+        const usd = num(line.totalCostUSD);
+        return usd
+          ? [
+              {
+                _tag: "SignalReported",
+                reading: { agentId, at: last, signal: { _tag: "Cost", usd } },
+              },
+            ]
+          : [];
+      }
       const ts = Date.parse(str(line?.timestamp) ?? "");
       if (!line || Number.isNaN(ts)) return [];
       const at = (ts - cfg.origin) / 1000;
@@ -356,9 +560,21 @@ export const makeDecoder = (cfg: DecoderConfig): Decoder => {
           ? [{ _tag: "ContextCompacted", agentId, at }]
           : [];
       }
+      // A pull request the agent made, written after the call that made it.
+      if (line.type === "pr-link" && lastCall) {
+        const repo = str(line.prRepository);
+        const n = num(line.prNumber);
+        return n
+          ? touchEvents(lastCall, [subject("pr", `${repo ? repo : ""}#${n}`)])
+          : [];
+      }
       if (type === "attachment") {
         const attachment = rec(line.attachment);
-        return [...setup(attachment, at), ...reminder(attachment, at)];
+        return [
+          ...setup(attachment, at),
+          ...hook(attachment, line, at),
+          ...reminder(attachment, at),
+        ];
       }
 
       const msg = rec(line.message);
@@ -371,7 +587,9 @@ export const makeDecoder = (cfg: DecoderConfig): Decoder => {
       announced = true;
       events.push(
         ...settle(false),
-        ...(type === "assistant" ? assistant(line, msg, at) : user(msg, at)),
+        ...(type === "assistant"
+          ? assistant(line, msg, at)
+          : user(line, msg, at)),
       );
       boundary = at;
       last = at;

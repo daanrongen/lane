@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { board } from "@/domain/board.ts";
-import { AgentId, SessionId, SpanId } from "@/domain/ids.ts";
+import { AgentId, SpanId, ThreadId } from "@/domain/ids.ts";
 import { emptyRun, type Run } from "@/domain/run.ts";
 import { type Task, taskId } from "@/domain/task.ts";
 
@@ -20,7 +20,7 @@ const task = (
   since,
 });
 const run = (extra: Partial<Run>): Run => ({
-  ...emptyRun(SessionId("s"), 0),
+  ...emptyRun(ThreadId("s"), 0),
   ...extra,
 });
 

@@ -15,8 +15,8 @@ import { tail } from "@/adapters/shared/tail.ts";
 import { taskLists } from "@/adapters/shared/taskLists.ts";
 import { statusOf } from "@/adapters/shared/taskStatus.ts";
 import { AgentId } from "@/domain/ids.ts";
-import type { Session } from "@/domain/session.ts";
 import type { Task, TaskStatus } from "@/domain/task.ts";
+import type { Thread } from "@/domain/thread.ts";
 import { SourceError } from "@/ports/SourceError.ts";
 import { TaskRepository } from "@/ports/TaskRepository.ts";
 
@@ -102,7 +102,7 @@ export const TaskRepositoryCodex = (poll: Schedule.Schedule<unknown>) =>
         Effect.provideService(CodexHome, home),
       );
 
-      const tasks = (session: Session) =>
+      const tasks = (session: Thread) =>
         Stream.unwrap(
           Effect.gen(function* () {
             const file = yield* locateRollout(fs, home, session.id);

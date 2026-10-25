@@ -1,0 +1,308 @@
+import { useMemo } from "react";
+import type { Act, Approval } from "@/domain/act.ts";
+import type { Asset } from "@/domain/assets.ts";
+import { contextMap } from "@/domain/context.ts";
+import type { AgentView, Floor } from "@/domain/floor.ts";
+import { agentOf } from "@/domain/ids.ts";
+import { mcpServers } from "@/domain/mcp.ts";
+import { hosts } from "@/domain/network.ts";
+import type { Run } from "@/domain/run.ts";
+import { skillsUsed } from "@/domain/skills.ts";
+import type { Task } from "@/domain/task.ts";
+import { Column, Row } from "@/ui/atoms/Box.tsx";
+import { Text } from "@/ui/atoms/Text.tsx";
+import { useMetrics, useTheme } from "@/ui/lib/context.ts";
+import { clip, dollars, duration, exact, modelName } from "@/ui/lib/format.ts";
+import { stateLook } from "@/ui/lib/look.ts";
+import { skillChips } from "@/ui/lib/usageRows.ts";
+import { ContextMap } from "@/ui/organisms/ContextMap.tsx";
+import { MachinePanel } from "@/ui/organisms/MachinePanel.tsx";
+import { McpServers } from "@/ui/organisms/McpServers.tsx";
+import { NetworkHosts } from "@/ui/organisms/NetworkHosts.tsx";
+import { UsageRow } from "@/ui/organisms/UsageRow.tsx";
+
+const ACTS = 8;
+
+const Heading = ({ children }: { children: string }) => (
+  <Text size="small" tone="dim">
+    {children}
+  </Text>
+);
+
+// Calls a classifier or the mode waved through are not worth a line.
+const notable = (a: Approval) =>
+  a.outcome === "deny" || a.by === "user" || a.by === "rule";
+
+const ActLine = ({ act, now }: { act: Act; now: number }) => {
+  const r = useMetrics();
+  const theme = useTheme();
+  const bad = act.status === "failed" || act.status === "denied";
+  const open = act.end === undefined;
+  const waiting = act.status === "awaiting";
+  return (
+    <Column>
+      <Row gap={r.dot}>
+        <Text size="small" tone={bad ? "failed" : open ? "running" : "dim"}>
+          {bad ? "✕" : waiting ? "◆" : open ? "●" : "✓"}
+        </Text>
+        <Text size="small" tone="dim" style={{ width: r.charWidth * 6 }}>
+          {act.kind}
+        </Text>
+        <Text size="small" style={{ flexGrow: 1, minWidth: 0 }}>
+          {act.label}
+        </Text>
+        <Text size="small" tone="dim">
+          {exact((act.end ?? now) - act.start)}
+        </Text>
+      </Row>
+      {act.approval && notable(act.approval) ? (
+        <Text size="small" tone="dim">
+          {[
+            `${act.approval.outcome === "allow" ? "allowed" : "denied"} by ${act.approval.by}`,
+            act.approval.rule,
+            act.approval.waited !== undefined &&
+              `after ${duration(act.approval.waited)}`,
+          ]
+            .filter(Boolean)
+            .join(" · ")}
+        </Text>
+      ) : null}
+      {act.failure ? (
+        <Text size="small" style={{ color: theme.failed }}>
+          {`${act.failure.class}: ${clip(act.failure.reason, 60)}`}
+        </Text>
+      ) : null}
+    </Column>
+  );
+};
+
+const Now = ({
+  agent,
+  run,
+  now,
+}: {
+  agent: AgentView;
+  run: Run;
+  now: number;
+}) => {
+  const r = useMetrics();
+  const acts = run.acts
+    .filter((a) => a.agentId === agentOf(agent.ref) && a.kind !== "think")
+    .slice(-ACTS)
+    .reverse();
+  return (
+    <Column gap={Math.round(r.dot / 2)}>
+      <Heading>NOW</Heading>
+      <Text size="small" tone="dim">
+        {[
+          agent.harness,
+          agent.model && modelName(agent.model),
+          agent.cost !== undefined && dollars(agent.cost),
+          ...Object.entries(agent.modes).map(([k, v]) => `${k} ${v}`),
+        ]
+          .filter(Boolean)
+          .join(" · ")}
+      </Text>
+      {agent.limits.map((l) => (
+        <Text
+          key={l.window}
+          size="small"
+          tone={l.used >= 0.9 ? "failed" : "dim"}
+        >
+          {[
+            `${l.window} quota ${Math.round(l.used * 100)}%`,
+            l.resetsAt !== undefined &&
+              `resets in ${duration((l.resetsAt - run.startedAt) / 1000 - now)}`,
+          ]
+            .filter(Boolean)
+            .join(" · ")}
+        </Text>
+      ))}
+      {acts.map((a) => (
+        <ActLine key={a.id} act={a} now={now} />
+      ))}
+    </Column>
+  );
+};
+
+// Steps and tasks shown before the rest are counted.
+const PLAN_ROWS = 5;
+
+const GLYPH = { done: "✓", doing: "●", next: "○" } as const;
+
+// A list's own order is the order of work: the todo list, then the queue, then goals.
+const WORK = ["todo", "agent", "queue", "goal"] as const;
+
+const Plan = ({ run, agent }: { run: Run; agent: AgentView }) => {
+  const r = useMetrics();
+  const plan = run.plans.findLast((p) => p.agentId === agentOf(agent.ref));
+  return (
+    <Column gap={Math.round(r.dot / 2)}>
+      <Heading>PLAN</Heading>
+      {plan ? (
+        <>
+          <Text size="small">{`${clip(plan.title, 60)} (${plan.status})`}</Text>
+          {plan.steps.slice(0, PLAN_ROWS).map((s) => (
+            <Text key={s} size="small" tone="dim">
+              {`· ${clip(s, 60)}`}
+            </Text>
+          ))}
+          {plan.steps.length > PLAN_ROWS ? (
+            <Text size="small" tone="dim">
+              {`+${plan.steps.length - PLAN_ROWS} more steps`}
+            </Text>
+          ) : null}
+        </>
+      ) : (
+        <Text size="small" tone="dim">
+          no plan
+        </Text>
+      )}
+    </Column>
+  );
+};
+
+// What is under way now, then what comes next in the order it will be picked up.
+const Tasks = ({
+  agent,
+  tasks,
+}: {
+  agent: AgentView;
+  tasks: readonly Task[];
+}) => {
+  const r = useMetrics();
+  const own = tasks.filter(
+    (t) => t.owner === agentOf(agent.ref) && t.source !== "now",
+  );
+  const rank = (t: Task) => WORK.indexOf(t.source as (typeof WORK)[number]);
+  const coming = [
+    ...own.filter((t) => t.status === "doing"),
+    ...own.filter((t) => t.status === "next").sort((a, b) => rank(a) - rank(b)),
+  ];
+  const done = own.filter((t) => t.status === "done").length;
+  return (
+    <Column gap={Math.round(r.dot / 2)}>
+      <Heading>{done ? `TASKS · ${done} done` : "TASKS"}</Heading>
+      {coming.slice(0, PLAN_ROWS).map((t) => (
+        <Text
+          key={t.id}
+          size="small"
+          tone={t.status === "doing" ? "text" : "dim"}
+        >
+          {`${GLYPH[t.status]} ${clip(t.title, 60)}`}
+        </Text>
+      ))}
+      {coming.length > PLAN_ROWS ? (
+        <Text size="small" tone="dim">
+          {`+${coming.length - PLAN_ROWS} more tasks`}
+        </Text>
+      ) : null}
+      {coming.length === 0 ? (
+        <Text size="small" tone="dim">
+          {done ? "all done" : "nothing reported"}
+        </Text>
+      ) : null}
+    </Column>
+  );
+};
+
+// The selected agent side by side: what it is doing, what fills its context, what it intends, how it is set up.
+export const DetailPanel = ({
+  floor,
+  agent,
+  run,
+  tasks,
+  assets,
+  now,
+  width,
+}: {
+  floor: Floor;
+  agent?: AgentView;
+  run?: Run;
+  tasks: readonly Task[];
+  assets: readonly Asset[];
+  now: number;
+  width: number;
+}) => {
+  const r = useMetrics();
+  const id = agent && agentOf(agent.ref);
+  const map = useMemo(
+    () =>
+      run && agent?.fill?.window
+        ? contextMap(
+            run.context.filter((e) => e.agentId === id),
+            run.setups.findLast((s) => s.agentId === id),
+            agent.fill.used,
+            agent.fill.window,
+          )
+        : undefined,
+    [run, agent, id],
+  );
+  const skills = useMemo(
+    () =>
+      run
+        ? skillChips(
+            skillsUsed(run.skills.filter((s) => s.agentId === id)),
+            assets,
+          )
+        : [],
+    [run, id, assets],
+  );
+  const theme = useTheme();
+  if (!agent) return <MachinePanel floor={floor} width={width} />;
+  if (!run) {
+    return <Text tone="dim">no transcript for this agent</Text>;
+  }
+  const col = r.compact ? width : Math.floor((width - r.pad * 3) / 4);
+  const look = stateLook(agent.state, theme);
+  return (
+    <Column gap={r.dot}>
+      <Row gap={r.dot}>
+        <Text
+          style={{ color: look.color }}
+        >{`${look.glyph} ${agent.name}`}</Text>
+        <Text size="small" tone="dim">
+          {agent.state}
+        </Text>
+        <Text size="small" tone="dim">
+          · esc or click the row to close
+        </Text>
+      </Row>
+      <Row
+        gap={r.pad}
+        align="flex-start"
+        style={{
+          flexDirection: r.compact ? "column" : "row",
+        }}
+      >
+        <Column style={{ width: col }}>
+          <Now agent={agent} run={run} now={(now - run.startedAt) / 1000} />
+        </Column>
+        <Column style={{ width: col }}>
+          {map ? (
+            <ContextMap map={map} agent={agent.name} width={col} />
+          ) : (
+            <>
+              <Heading>CONTEXT</Heading>
+              <Text size="small" tone="dim">
+                n/a
+              </Text>
+            </>
+          )}
+        </Column>
+        <Column gap={r.dot} style={{ width: col }}>
+          <Plan run={run} agent={agent} />
+          <Tasks agent={agent} tasks={tasks} />
+        </Column>
+        <Column gap={r.dot} style={{ width: col }}>
+          <Heading>SETUP</Heading>
+          <McpServers servers={mcpServers(run.setups, run.spans)} />
+          <UsageRow title="SKILLS" chips={skills} />
+          <NetworkHosts
+            hosts={hosts(run.requests.filter((q) => q.agentId === id))}
+          />
+        </Column>
+      </Row>
+    </Column>
+  );
+};

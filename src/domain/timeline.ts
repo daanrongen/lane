@@ -46,7 +46,7 @@ export interface Timeline {
 }
 
 // Parents first, children after in spawn order.
-const orderAgents = (agents: readonly Agent[]) => {
+export const orderAgents = (agents: readonly Agent[]) => {
   const out: { agent: Agent; depth: number }[] = [];
   const visit = (parent: AgentId | null, depth: number) => {
     for (const agent of agents) {

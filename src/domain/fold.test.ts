@@ -1,13 +1,13 @@
 import { describe, expect, test } from "bun:test";
 import type { RunEvent } from "@/domain/events.ts";
 import { fold, foldAll } from "@/domain/fold.ts";
-import { AgentId, SessionId, SpanId } from "@/domain/ids.ts";
+import { AgentId, SpanId, ThreadId } from "@/domain/ids.ts";
 import { emptyRun, emptyUsage } from "@/domain/run.ts";
 import { timeline } from "@/domain/timeline.ts";
 
 const main = AgentId("main");
 const sub = AgentId("sub");
-const run0 = emptyRun(SessionId("s1"), 0);
+const run0 = emptyRun(ThreadId("s1"), 0);
 
 const events: RunEvent[] = [
   {

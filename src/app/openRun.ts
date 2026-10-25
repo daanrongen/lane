@@ -1,8 +1,8 @@
 import { Effect, Stream, SubscriptionRef } from "effect";
 import { fold } from "@/domain/fold.ts";
 import { emptyRun, type Run } from "@/domain/run.ts";
-import type { Session } from "@/domain/session.ts";
 import type { Task } from "@/domain/task.ts";
+import type { Thread } from "@/domain/thread.ts";
 import { Harnesses } from "@/ports/Harness.ts";
 import { SourceError } from "@/ports/SourceError.ts";
 
@@ -15,7 +15,7 @@ export interface OpenRun {
 }
 
 // Folds a session's events into a Run, and follows its task lists, until the scope closes.
-export const openRun = (session: Session) =>
+export const openRun = (session: Thread) =>
   Effect.gen(function* () {
     const harnesses = yield* Harnesses;
     const run = yield* SubscriptionRef.make(emptyRun(session.id, 0));
