@@ -12,11 +12,10 @@ export interface Found extends RawProcess {
   readonly harness: HarnessId;
 }
 
-// How to tell a harness's process from the rest; `registry` says the harness reports its own live threads.
+// How to tell a harness's process from the rest.
 export interface Matcher {
   readonly harness: HarnessId;
   readonly test: RegExp;
-  readonly registry: boolean;
 }
 
 const PROGRAM = (name: string, not: string) =>
@@ -28,14 +27,12 @@ export const MATCHERS: readonly Matcher[] = [
   {
     harness: "claude",
     test: PROGRAM("claude", "mcp|doctor|update|install|config|setup-token"),
-    registry: true,
   },
   {
     harness: "codex",
     test: PROGRAM("codex", "mcp|mcp-server|login|logout|completion|app-server"),
-    registry: false,
   },
-  { harness: "ollama", test: /^(?:\S*\/)?ollama\s+run\b/, registry: false },
+  { harness: "ollama", test: /^(?:\S*\/)?ollama\s+run\b/ },
 ];
 
 export const find = (
@@ -47,11 +44,10 @@ export const find = (
     return m ? [{ ...p, harness: m.harness }] : [];
   });
 
-// A process backs a thread in its directory. Threads a registry does not vouch for come alive when one runs there; processes no thread explains stay on their own.
+// A process backs a thread in its directory: threads already live are counted first, then the newest quiet ones come alive. Processes no thread explains stay on their own.
 export const presence = (
   threads: readonly Thread[],
   procs: readonly Found[],
-  matchers: readonly Matcher[] = MATCHERS,
 ): { threads: readonly Thread[]; orphans: readonly Found[] } => {
   const promoted = new Set<Thread>();
   const orphans: Found[] = [];
@@ -68,14 +64,12 @@ export const presence = (
     const [harness, cwd] = key.split("\0");
     const here = threads.filter((t) => t.harness === harness && t.cwd === cwd);
     let need = group.length - here.filter((t) => t.status !== "past").length;
-    if (!matchers.find((m) => m.harness === harness)?.registry) {
-      const quiet = here
-        .filter((t) => t.status === "past")
-        .sort((a, b) => b.updatedAt - a.updatedAt)
-        .slice(0, Math.max(0, need));
-      for (const t of quiet) promoted.add(t);
-      need -= quiet.length;
-    }
+    const quiet = here
+      .filter((t) => t.status === "past")
+      .sort((a, b) => b.updatedAt - a.updatedAt)
+      .slice(0, Math.max(0, need));
+    for (const t of quiet) promoted.add(t);
+    need -= quiet.length;
     // The newest process is the one with no transcript yet.
     const byAge = [...group].sort(
       (a, b) => (a.startedAt ?? 0) - (b.startedAt ?? 0),

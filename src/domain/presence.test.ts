@@ -54,13 +54,6 @@ describe("find", () => {
 });
 
 describe("presence", () => {
-  test("a registry's live threads are taken as they are", () => {
-    const t = [thread("claude", "a", "/w", "past")];
-    const out = presence(t, [proc("claude", 1, "/w")]);
-    expect(out.threads[0]?.status).toBe("past");
-    expect(out.orphans).toHaveLength(1);
-  });
-
   test("a process brings the newest quiet thread in its directory to life", () => {
     const t = [
       thread("codex", "old", "/w", "past", 1),
