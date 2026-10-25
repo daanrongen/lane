@@ -33,9 +33,6 @@ export const ContextMap = ({
         <Row gap={r.dot}>
           <Text>Context</Text>
           <Text tone="dim">{agent}</Text>
-          <Text size="small" tone="dim">
-            {tokens(map.window)}
-          </Text>
         </Row>
         <Row gap={r.dot}>
           <Text>{tokens(map.used)}</Text>
