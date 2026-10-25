@@ -8,11 +8,11 @@ It follows Claude Code and Codex threads and the processes behind them (plus the
 
 One view with no sub-pages: a fixed top bar, a scrolling main and a fixed controls bar.
 
-- Top bar: agents by state, harness counts and tokens
+- Top bar: agents by state, harness counts, tokens and spend
 - Attention strip: who needs you, is stalled or failed, and for how long
 - Fleet: a row per agent grouped by workspace, with its state, model, current act, context fill and insights, and its own lane on one shared time axis; runtimes such as Ollama beside the agents using them
 - Where they work: each workspace's touched files as a tree, with agents drawn on the nodes and a mark where two agents meet on a file
-- Detail: for the selected agent, what it is doing, its context, plan and tasks, and setup, side by side
+- Detail: for the selected agent, what it is doing, its context, its plan with the current and upcoming tasks under it, and setup, side by side; with nothing selected, the machine's harnesses, what is up next and what looks wrong
 - Feed and changes: what every agent did lately with an activity histogram, and the files edited across agents
 - Cost: spend so far where the harness totals it (Claude Code, from its cost state) in the top bar and the detail; `n/a` elsewhere
 - Up next: an idle agent's row shows the next item of its todo list, queue or goal; the machine panel lists them
@@ -69,7 +69,7 @@ Hexagonal, under `src/`:
 
 - `domain/`: pure models and folds (thread, run, act, ref, signal, link, plan, agent state, attention, alerts, replay, insights, file tree, floor, timeline, context, mcp, models, network, skills, task)
 - `ports/`: Harness, RunSource, ThreadRepository, TaskRepository, Assets, ProcessProbe, Workspaces, Runtimes, SourceError
-- `adapters/`: claude, codex (reads SQLite for goals, queued prompts and spawned threads), agents, ollama (assets and the loaded-model runtime), macOS appearance, process and git workspace detection, and in-memory fakes, including a scenario that plays many harnesses' work in real time
+- `adapters/`: claude, codex (reads SQLite for goals, queued prompts and spawned threads), agents, ollama (assets and the loaded-model runtime), macOS appearance and notifications, process and git workspace detection, and in-memory fakes, including a scenario that plays many harnesses' work in real time
 - `app/`: SessionsStore, Fleet (one floor of every live thread and process), Layers, the bridge to UI ports
 - `ui/`: atoms, molecules, organisms, pages, templates
 - `bin/`: entry points (start, demo, live, shot, binary, native)
